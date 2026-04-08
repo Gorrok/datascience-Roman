@@ -1,0 +1,14 @@
+[Unit]
+Description=Telegram Invite Tracker Bot
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/invite_bot
+ExecStart=/root/invite_bot/venv/bin/python /root/invite_bot/invite_tracker.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

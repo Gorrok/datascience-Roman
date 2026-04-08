@@ -1,0 +1,61 @@
+#!/usr/bin/expect -f
+# Скрипт для подключения к Beget через SSH и деплоя бота
+
+# Конфигурация - ИЗМЕНИТЕ ЭТИ ЗНАЧЕНИЯ!
+set beget_user "your_username"
+set beget_host "your_host.beget.tech"
+set beget_password "your_password"
+set bot_directory "invite_bot"
+
+# Таймаут ожидания
+set timeout 30
+
+# Подключение к серверу
+spawn ssh $beget_user@$beget_host
+
+expect {
+    "password:" {
+        send "$beget_password\r"
+        exp_continue
+    }
+    "$ " {
+        # Успешное подключение
+        send_user "\n=== Подключение к Beget успешно ===\n"
+    }
+    timeout {
+        send_user "\nОшибка: Таймаут подключения\n"
+        exit 1
+    }
+    eof {
+        send_user "\nОшибка: Соединение закрыто\n"
+        exit 1
+    }
+}
+
+# Создание директории для бота
+send "mkdir -p $bot_directory\r"
+expect "$ "
+
+# Переход в директорию
+send "cd $bot_directory\r"
+expect "$ "
+
+# Информация о текущей директории
+send "pwd\r"
+expect "$ "
+
+send_user "\n=== Директория для бота готова ===\n"
+send_user "\nТеперь загрузите файлы через SCP или FileZilla:\n"
+send_user "  - invite_bot.py\n"
+send_user "  - requirements.txt\n"
+send_user "  - .env (настроенный)\n"
+send_user "  - credentials.json\n"
+send_user "  - start_bot.sh\n"
+send_user "  - stop_bot.sh\n"
+send_user "  - check_status.sh\n"
+send_user "\nПосле загрузки выполните:\n"
+send_user "  chmod +x *.sh\n"
+send_user "  ./start_bot.sh\n"
+
+# Оставляем сессию открытой
+interact
