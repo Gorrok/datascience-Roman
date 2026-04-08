@@ -1,0 +1,33 @@
+# Правила работы с Profit-Premium
+
+## Перед каждым коммитом ОБЯЗАТЕЛЬНО:
+1. cd /tmp/profit-premium
+2. npx prettier --write . --ignore-path .gitignore
+3. Только потом git add && git commit
+
+## Prettier конфиг (.prettierrc):
+- singleQuote: true
+- semi: true
+- printWidth: 100
+- trailingComma: es5
+- arrowParens: avoid
+
+## Ветки — только от origin/main:
+git fetch origin && git checkout -b feat/название origin/main
+
+## Push — только в форк Gorrok:
+git push fork имя-ветки
+
+## PR создавать через API (curl), head: "Gorrok:ветка", base: "main"
+
+## CI использует npm install (НЕ npm ci) — не менять!
+
+## Цвета бренда:
+- Бордо: #5C1E2D (burgundy)
+- Крем: #F0EAE0 (cream)
+
+## Шрифты:
+- Заголовки: font-serif (Cormorant Garamond), UPPERCASE
+- Текст: font-sans (Inter)
+
+## После каждой сессии обновить README.md в этой папке!
