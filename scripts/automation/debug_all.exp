@@ -1,0 +1,51 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🔍 Полная диагностика..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Проверяем структуру директорий
+        send "echo '=== СТРУКТУРА ДИРЕКТОРИЙ ===' && ls -la /root/ | grep -E '(invite|beget)' && ls -la \"/root/beget_deployment 2/\" && ls -la /root/invite_bot/\r"
+        expect "# "
+        
+        # Проверяем виртуальное окружение
+        send "echo '=== ВИРТУАЛЬНОЕ ОКРУЖЕНИЕ ===' && ls -la /root/bot_env/bin/ && which python3 && /root/bot_env/bin/python3 --version\r"
+        expect "# "
+        
+        # Проверяем переменные окружения
+        send "echo '=== ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ ===' && cat /root/invite_bot/.env && echo '---' && cat \"/root/beget_deployment 2/.env\"\r"
+        expect "# "
+        
+        # Тестируем запуск вручную
+        send "echo '=== ТЕСТ ЗАПУСКА INVITE ===' && cd /root/invite_bot && source /root/bot_env/bin/activate && timeout 5 python3 invite_tracker.py 2>&1 | head -5\r"
+        expect "# "
+        
+        send "echo '=== ТЕСТ ЗАПУСКА MEMBER ===' && cd \"/root/beget_deployment 2\" && source /root/bot_env/bin/activate && timeout 5 python3 bot.py 2>&1 | head -5\r"
+        expect "# "
+        
+        # Проверяем права доступа
+        send "echo '=== ПРАВА ДОСТУПА ===' && ls -la /root/invite_bot/invite_tracker.py && ls -la \"/root/beget_deployment 2/bot.py\" 2>/dev/null || echo 'bot.py не найден'\r"
+        expect "# "
+        
+        puts "✅ Диагностика завершена"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

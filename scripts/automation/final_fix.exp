@@ -1,0 +1,69 @@
+#!/usr/bin/expect -f
+
+set timeout 60
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🔧 Финальное исправление ботов..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Убиваем все старые процессы
+        send "pkill -f invite_tracker.py && pkill -f bot.py || echo 'Процессы остановлены'\r"
+        expect "# "
+        
+        # Размаскируем invite-tracker
+        send "systemctl unmask invite-tracker.service\r"
+        expect "# "
+        
+        # Запускаем invite-tracker
+        send "systemctl start invite-tracker.service\r"
+        expect "# "
+        
+        # Создаем member-tracker.service простой командой
+        send "echo '[Unit]\nDescription=Telegram Member Tracker Bot\nAfter=network.target\n\n[Service]\nType=simple\nUser=root\nWorkingDirectory=/root/beget_deployment 2\nExecStart=/root/bot_env/bin/python /root/beget_deployment 2/bot.py\nRestart=always\nRestartSec=10\nStandardOutput=journal\nStandardError=journal\n\n[Install]\nWantedBy=multi-user.target' > /etc/systemd/system/member-tracker.service\r"
+        expect "# "
+        
+        # Перезагружаем systemd
+        send "systemctl daemon-reload\r"
+        expect "# "
+        
+        # Включаем member-tracker
+        send "systemctl enable member-tracker.service\r"
+        expect "# "
+        
+        # Запускаем member-tracker
+        send "systemctl start member-tracker.service\r"
+        expect "# "
+        
+        # Ждем и проверяем статус
+        send "sleep 5\r"
+        expect "# "
+        
+        send "echo '=== СТАТУС INVITE TRACKER ===' && systemctl status invite-tracker.service --no-pager | head -10\r"
+        expect "# "
+        
+        send "echo '=== СТАТУС MEMBER TRACKER ===' && systemctl status member-tracker.service --no-pager | head -10\r"
+        expect "# "
+        
+        send "echo '=== ПРОЦЕССЫ PYTHON ===' && ps aux | grep python | grep -v grep\r"
+        expect "# "
+        
+        puts "🎉 Боты исправлены!"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

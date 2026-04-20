@@ -1,0 +1,49 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🚀 Перезапускаем Invite Tracker (/root/invite_bot)..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Останавливаем все старые процессы
+        send "pkill -f invite_tracker.py || echo 'Процессы остановлены'\r"
+        expect "# "
+        
+        # Запускаем Invite Tracker
+        send "cd /root/invite_bot && source /root/bot_env/bin/activate && python invite_tracker.py > logs/bot_output.log 2>&1 &\r"
+        expect "# "
+        
+        send "INVITE_PID=\$! && echo \$INVITE_PID > bot.pid && echo \"Invite Tracker запущен с PID: \$INVITE_PID\"\r"
+        expect "# "
+        
+        # Ждем и проверяем
+        send "sleep 3\r"
+        expect "# "
+        
+        send "ps aux | grep invite_tracker | grep -v grep\r"
+        expect "# "
+        
+        send "tail -5 logs/bot_output.log\r"
+        expect "# "
+        
+        puts "🎉 Invite Tracker перезапущен!"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

@@ -1,0 +1,52 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🔍 Проверяем и исправляем ботов..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Создаем директорию logs для Member Tracker
+        send "mkdir -p \"/root/beget_deployment 2/logs\"\r"
+        expect "# "
+        
+        # Проверяем процессы
+        send "echo '=== ПРОЦЕССЫ ===' && ps aux | grep python | grep -v unattended | grep -v fail2ban | grep -v grep\r"
+        expect "# "
+        
+        # Проверяем логи Invite Tracker
+        send "echo '=== ЛОГИ INVITE TRACKER (последние 10 строк) ===' && tail -10 /root/invite_bot/logs/bot_output.log 2>/dev/null || echo 'Логов нет'\r"
+        expect "# "
+        
+        # Проверяем логи Member Tracker
+        send "echo '=== ЛОГИ MEMBER TRACKER (последние 10 строк) ===' && tail -10 \"/root/beget_deployment 2/logs/bot_output.log\" 2>/dev/null || echo 'Логов нет'\r"
+        expect "# "
+        
+        # Тестируем подключение к Telegram (Invite Tracker)
+        send "echo '=== ТЕСТ TELEGRAM (INVITE) ===' && cd /root/invite_bot && source /root/bot_env/bin/activate && timeout 10 python3 -c \"import asyncio; from telegram import Bot; from invite_tracker import TELEGRAM_BOT_TOKEN; async def test(): bot = Bot(token=TELEGRAM_BOT_TOKEN); info = await bot.get_me(); print(f'✅ Бот: @{info.username}'); asyncio.run(test())\" 2>/dev/null || echo '❌ Ошибка Telegram'\r"
+        expect "# "
+        
+        # Тестируем подключение к Google Sheets (Invite Tracker)
+        send "echo '=== ТЕСТ GOOGLE SHEETS (INVITE) ===' && cd /root/invite_bot && source /root/bot_env/bin/activate && timeout 10 python3 -c \"import gspread; from oauth2client.service_account import ServiceAccountCredentials; from invite_tracker import SPREADSHEET_NAME; scope=['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']; creds=ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope); client=gspread.authorize(creds); spreadsheet=client.open(SPREADSHEET_NAME); print(f'✅ Sheets: {SPREADSHEET_NAME}'); worksheets = spreadsheet.worksheets(); print(f'📊 Листы: {[ws.title for ws in worksheets]}')\" 2>/dev/null || echo '❌ Ошибка Google Sheets'\r"
+        expect "# "
+        
+        puts "✅ Проверка завершена"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

@@ -1,0 +1,36 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🔧 Исправляем ошибку с name..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Исправляем name на __name__
+        send "cd \"/root/beget_deployment 2\" && sed -i 's/logger = logging.getLogger(name)/logger = logging.getLogger(__name__)/' bot.py\r"
+        expect "# "
+        
+        # Проверяем исправление
+        send "grep -n 'logger.*getLogger' bot.py\r"
+        expect "# "
+        
+        puts "✅ Ошибка исправлена"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

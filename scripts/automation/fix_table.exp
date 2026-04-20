@@ -1,0 +1,47 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🔄 Переносим Invite Tracker в правильную таблицу..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Останавливаем Invite Tracker
+        send "pkill -f invite_tracker.py || echo 'Процессы остановлены'\r"
+        expect "# "
+        
+        # Меняем таблицу в коде
+        send "cd /root/invite_bot && sed -i \"s/SPREADSHEET_NAME = '1x1iO5TAp-GEQhbaP9Wg39Vmm6uOzn8pSygexFgLS_6M'/SPREADSHEET_NAME = '1_zWBxOJ-f_pY_uiwyZ-TWXKooul4K_waNXFWLaZ5f8I'/\" invite_tracker.py\r"
+        expect "# "
+        
+        # Проверяем изменения
+        send "grep 'SPREADSHEET_NAME' invite_tracker.py\r"
+        expect "# "
+        
+        # Запускаем Invite Tracker
+        send "source /root/bot_env/bin/activate && python invite_tracker.py > logs/bot_output.log 2>&1 &\r"
+        expect "# "
+        
+        send "INVITE_PID=\$! && echo \$INVITE_PID > bot.pid && echo \"Invite Tracker запущен с PID: \$INVITE_PID\"\r"
+        expect "# "
+        
+        puts "✅ Таблица исправлена"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

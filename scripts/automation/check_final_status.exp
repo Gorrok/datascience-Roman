@@ -1,0 +1,44 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "📊 Финальная проверка статуса..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Проверяем процессы
+        send "ps aux | grep python | grep -v unattended | grep -v fail2ban | grep -v grep\r"
+        expect "# "
+        
+        # Проверяем логи Invite Tracker
+        send "echo '=== ЛОГИ INVITE TRACKER ===' && cat /root/invite_bot/logs/bot_output.log 2>/dev/null | tail -10\r"
+        expect "# "
+        
+        # Проверяем логи Member Tracker
+        send "echo '=== ЛОГИ MEMBER TRACKER ===' && cat \"/root/beget_deployment 2/logs/bot_output.log\" 2>/dev/null | tail -10\r"
+        expect "# "
+        
+        # Тестируем Telegram API
+        send "echo '=== ТЕСТ TELEGRAM API ===' && source /root/bot_env/bin/activate && python3 -c \"import asyncio; from telegram import Bot; from dotenv import load_dotenv; import os; load_dotenv(); token=os.getenv('TELEGRAM_BOT_TOKEN'); async def test(): bot=Bot(token=token); info=await bot.get_me(); print(f'🤖 Бот: @{info.username}'); asyncio.run(test())\" 2>/dev/null || echo '❌ Ошибка Telegram'\r"
+        expect "# "
+        
+        puts "✅ Проверка завершена"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

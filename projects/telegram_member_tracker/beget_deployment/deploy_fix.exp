@@ -1,0 +1,81 @@
+#!/usr/bin/expect -f
+
+set timeout 60
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🔄 Подключаемся для исправления развертывания..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Создаем виртуальное окружение
+        send "python3 -m venv bot_env\r"
+        expect "# "
+        
+        # Активируем виртуальное окружение
+        send "source bot_env/bin/activate\r"
+        expect "# "
+        
+        # Обновляем pip
+        send "pip install --upgrade pip\r"
+        expect "# "
+        
+        # Устанавливаем зависимости
+        send "pip install python-telegram-bot gspread oauth2client\r"
+        expect "# "
+        puts "✅ Зависимости установлены"
+        
+        # Переходим в директорию с ботом
+        send "cd /root && ls -la\r"
+        expect "# "
+        
+        # Находим директорию с ботом
+        send "BOT_DIR=\$(find . -name \"invite_tracker.py\" -exec dirname {} \\; | head -1) && echo \"Бот найден в: \$BOT_DIR\"\r"
+        expect "# "
+        
+        # Переходим в директорию и проверяем файлы
+        send "cd \$BOT_DIR && pwd && ls -la\r"
+        expect "# "
+        
+        # Останавливаем старый процесс если есть
+        send "pkill -f invite_tracker.py || echo 'Старый процесс не найден'\r"
+        expect "# "
+        
+        # Создаем директорию для логов
+        send "mkdir -p logs\r"
+        expect "# "
+        
+        # Запускаем бота
+        send "source /root/bot_env/bin/activate && python invite_tracker.py > logs/bot_output.log 2>&1 &\r"
+        expect "# "
+        send "BOT_PID=\$! && echo \$BOT_PID > bot.pid && echo \"Бот запущен с PID: \$BOT_PID\"\r"
+        expect "# "
+        
+        # Ждем и проверяем статус
+        send "sleep 5\r"
+        expect "# "
+        send "cat bot.pid && ps aux | grep invite_tracker\r"
+        expect "# "
+        
+        # Проверяем логи
+        send "tail -10 logs/bot_output.log\r"
+        expect "# "
+        
+        puts "🎉 Развертывание исправлено!"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

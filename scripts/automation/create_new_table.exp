@@ -1,0 +1,43 @@
+#!/usr/bin/expect -f
+
+set timeout 60
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "📊 Создаем новую таблицу для Member Tracker..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Создаем новую таблицу
+        send "cd \"/root/beget_deployment 2\" && source /root/bot_env/bin/activate && python3 -c \"import gspread; from oauth2client.service_account import ServiceAccountCredentials; scope=['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']; creds=ServiceAccountCredentials.from_json_keyfile_name('credentials1.json', scope); client=gspread.authorize(creds); spreadsheet=client.create('MemberTrackerTable'); print(f'Создана таблица: {spreadsheet.url}'); worksheet=spreadsheet.get_worksheet(0); worksheet.update_title('Members'); worksheet.update('A1:C1', [['User ID', 'Link Name', 'Join Date']]); print('Лист настроен')\"\r"
+        expect "# "
+        
+        # Изменяем код member tracker
+        send "sed -i \"s/SPREADSHEET_NAME = 'ShepoitBukmekera'/SPREADSHEET_NAME = 'MemberTrackerTable'/\" bot.py\r"
+        expect "# "
+        
+        send "sed -i 's/worksheet(\"MemberTracking\")/worksheet(\"Members\")/' bot.py\r"
+        expect "# "
+        
+        # Проверяем изменения
+        send "grep -n 'SPREADSHEET_NAME\|worksheet' bot.py\r"
+        expect "# "
+        
+        puts "✅ Новая таблица создана"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

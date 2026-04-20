@@ -1,0 +1,140 @@
+#!/usr/bin/expect -f
+
+set timeout 60
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🔧 Чиним systemd сервисы..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Проверяем существующие сервисы
+        send "ls -la /etc/systemd/system/ | grep tracker\r"
+        expect "# "
+        
+        # Удаляем старые если есть
+        send "rm -f /etc/systemd/system/*tracker*.service\r"
+        expect "# "
+        
+        # Создаем invite-tracker.service
+        send "cat > /etc/systemd/system/invite-tracker.service << 'EOF'\r"
+        expect "> "
+        send "[Unit]\r"
+        expect "> "
+        send "Description=Telegram Invite Tracker Bot\r"
+        expect "> "
+        send "After=network.target\r"
+        expect "> "
+        send "\r"
+        expect "> "
+        send "[Service]\r"
+        expect "> "
+        send "Type=simple\r"
+        expect "> "
+        send "User=root\r"
+        expect "> "
+        send "WorkingDirectory=/root/invite_bot\r"
+        expect "> "
+        send "ExecStart=/root/bot_env/bin/python /root/invite_bot/invite_tracker.py\r"
+        expect "> "
+        send "Restart=always\r"
+        expect "> "
+        send "RestartSec=10\r"
+        expect "> "
+        send "StandardOutput=journal\r"
+        expect "> "
+        send "StandardError=journal\r"
+        expect "> "
+        send "\r"
+        expect "> "
+        send "[Install]\r"
+        expect "> "
+        send "WantedBy=multi-user.target\r"
+        expect "> "
+        send "EOF\r"
+        expect "# "
+        
+        # Создаем member-tracker.service
+        send "cat > /etc/systemd/system/member-tracker.service << 'EOF'\r"
+        expect "> "
+        send "[Unit]\r"
+        expect "> "
+        send "Description=Telegram Member Tracker Bot\r"
+        expect "> "
+        send "After=network.target\r"
+        expect "> "
+        send "\r"
+        expect "> "
+        send "[Service]\r"
+        expect "> "
+        send "Type=simple\r"
+        expect "> "
+        send "User=root\r"
+        expect "> "
+        send "WorkingDirectory=/root/beget_deployment 2\r"
+        expect "> "
+        send "ExecStart=/root/bot_env/bin/python \"/root/beget_deployment 2/bot.py\"\r"
+        expect "> "
+        send "Restart=always\r"
+        expect "> "
+        send "RestartSec=10\r"
+        expect "> "
+        send "StandardOutput=journal\r"
+        expect "> "
+        send "StandardError=journal\r"
+        expect "> "
+        send "\r"
+        expect "> "
+        send "[Install]\r"
+        expect "> "
+        send "WantedBy=multi-user.target\r"
+        expect "> "
+        send "EOF\r"
+        expect "# "
+        
+        # Перезагружаем systemd
+        send "systemctl daemon-reload\r"
+        expect "# "
+        
+        # Включаем сервисы
+        send "systemctl enable invite-tracker.service\r"
+        expect "# "
+        send "systemctl enable member-tracker.service\r"
+        expect "# "
+        
+        # Запускаем сервисы
+        send "systemctl start invite-tracker.service\r"
+        expect "# "
+        send "systemctl start member-tracker.service\r"
+        expect "# "
+        
+        # Ждем и проверяем статус
+        send "sleep 5\r"
+        expect "# "
+        send "systemctl status invite-tracker.service --no-pager -l\r"
+        expect "# "
+        send "systemctl status member-tracker.service --no-pager -l\r"
+        expect "# "
+        
+        # Проверяем процессы
+        send "ps aux | grep python | grep -v unattended | grep -v fail2ban\r"
+        expect "# "
+        
+        puts "🎉 Сервисы исправлены!"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

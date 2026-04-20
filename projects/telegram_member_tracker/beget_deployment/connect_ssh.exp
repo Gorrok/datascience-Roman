@@ -1,0 +1,32 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname [lindex $argv 0]
+set username [lindex $argv 1] 
+set password [lindex $argv 2]
+set command [lindex $argv 3]
+
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname "$command"
+expect {
+    "password:" {
+        send "$password\r"
+        expect {
+            "$ " {
+                send "pwd && ls -la\r"
+                expect "$ "
+            }
+            timeout {
+                puts "Timeout waiting for command prompt"
+                exit 1
+            }
+        }
+    }
+    "Permission denied" {
+        puts "Authentication failed"
+        exit 1
+    }
+    timeout {
+        puts "Connection timeout"
+        exit 1
+    }
+}

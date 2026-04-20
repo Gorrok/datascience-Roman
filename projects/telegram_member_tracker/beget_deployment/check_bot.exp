@@ -1,0 +1,48 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🔍 Проверяем работу бота..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Переходим в директорию бота
+        send "cd /root/invite_bot\r"
+        expect "# "
+        
+        # Проверяем статус
+        send "pwd && cat bot.pid && ps aux | grep invite_tracker | grep -v grep\r"
+        expect "# "
+        
+        # Проверяем логи
+        send "echo '=== Последние 20 строк логов ===' && tail -20 logs/bot_output.log\r"
+        expect "# "
+        
+        # Проверяем файл логов
+        send "echo '=== Содержимое bot_output.log ===' && cat bot_output.log\r"
+        expect "# "
+        
+        # Проверяем подключение к Telegram
+        send "python3 -c \"import asyncio; from telegram import Bot; from invite_tracker import TELEGRAM_BOT_TOKEN; async def test(): bot = Bot(token=TELEGRAM_BOT_TOKEN); info = await bot.get_me(); print(f'🤖 Бот: @{info.username}'); asyncio.run(test())\" 2>/dev/null || echo 'Ошибка проверки Telegram'\r"
+        expect "# "
+        
+        puts "✅ Проверка завершена"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

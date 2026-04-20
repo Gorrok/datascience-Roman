@@ -1,0 +1,59 @@
+#!/usr/bin/expect -f
+
+set timeout 60
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🔧 Финальное исправление бота..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Переходим в директорию бота
+        send "cd /root/invite_bot\r"
+        expect "# "
+        
+        # Останавливаем старый процесс
+        send "pkill -f invite_tracker.py || echo 'Старый процесс остановлен'\r"
+        expect "# "
+        
+        # Исправляем код - убираем nest_asyncio
+        send "sed -i '/import nest_asyncio/d' invite_tracker.py\r"
+        expect "# "
+        send "sed -i '/nest_asyncio.apply()/d' invite_tracker.py\r"
+        expect "# "
+        puts "✅ Код исправлен"
+        
+        # Запускаем бота с правильным Python
+        send "source /root/bot_env/bin/activate && python invite_tracker.py > logs/bot_output.log 2>&1 &\r"
+        expect "# "
+        send "BOT_PID=\$! && echo \$BOT_PID > bot.pid && echo \"Бот запущен с PID: \$BOT_PID\"\r"
+        expect "# "
+        
+        # Ждем и проверяем
+        send "sleep 5\r"
+        expect "# "
+        send "cat bot.pid && ps aux | grep python | grep -v grep\r"
+        expect "# "
+        
+        # Проверяем логи
+        send "echo '=== Логи бота ===' && tail -15 logs/bot_output.log\r"
+        expect "# "
+        
+        puts "🎉 Бот исправлен и запущен!"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

@@ -1,0 +1,39 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🔍 Проверяем файлы ботов..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Проверяем содержимое папок
+        send "echo '=== СОДЕРЖИМОЕ INVITE BOT ===' && ls -la /root/invite_bot/\r"
+        expect "# "
+        
+        send "echo '=== СОДЕРЖИМОЕ MEMBER BOT ===' && ls -la \"/root/beget_deployment 2/\"\r"
+        expect "# "
+        
+        # Проверяем правильный файл для member bot
+        send "find /root -name \"*.py\" | grep -i member\r"
+        expect "# "
+        
+        puts "✅ Проверка файлов завершена"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

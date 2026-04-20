@@ -1,0 +1,65 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🔧 Исправляем загрузку переменных..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Проверяем .env файл
+        send "echo '=== .ENV ФАЙЛ ===' && cat \"/root/beget_deployment 2/.env\"\r"
+        expect "# "
+        
+        # Исправляем код загрузки переменных
+        send "cd \"/root/beget_deployment 2\" && sed -i 's/from dotenv import load_dotenv/# from dotenv import load_dotenv/' bot.py\r"
+        expect "# "
+        
+        # Добавляем жестко заданные переменные
+        send "sed -i 's/load_dotenv()/# load_dotenv()/' bot.py\r"
+        expect "# "
+        
+        send "sed -i 's/TELEGRAM_BOT_TOKEN = .*/TELEGRAM_BOT_TOKEN = '\''8566507218:AAEG5ifQrdlvMH3cWA5eMSRW6p7wacIAy10'\''/' bot.py\r"
+        expect "# "
+        
+        send "sed -i 's/CHANNEL_USERNAME = .*/CHANNEL_USERNAME = -1001225013297/' bot.py\r"
+        expect "# "
+        
+        send "sed -i 's/SPREADSHEET_NAME = .*/SPREADSHEET_NAME = '\''ShepoitBukmekera'\''/' bot.py\r"
+        expect "# "
+        
+        # Проверяем исправленный код
+        send "echo '=== ИСПРАВЛЕННЫЙ КОД ===' && head -15 bot.py\r"
+        expect "# "
+        
+        # Останавливаем старый процесс
+        send "pkill -f 'beget_deployment 2' || echo 'Процессы остановлены'\r"
+        expect "# "
+        
+        # Запускаем исправленный bot
+        send "source /root/bot_env/bin/activate && python bot.py > logs/bot_output.log 2>&1 &\r"
+        expect "# "
+        
+        # Проверяем
+        send "sleep 3 && ps aux | grep python | grep -v grep\r"
+        expect "# "
+        
+        puts "✅ Переменные исправлены"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

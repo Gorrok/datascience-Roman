@@ -1,0 +1,14 @@
+[Unit]
+Description=Mymeat Reminder Bot
+After=network.target
+
+[Service]
+Type=simple
+User=www
+WorkingDirectory=/home/www/mymeat_bot
+ExecStart=/home/www/mymeat_bot/venv/bin/python bot.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

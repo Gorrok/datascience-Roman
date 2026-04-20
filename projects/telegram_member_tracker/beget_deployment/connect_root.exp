@@ -1,0 +1,45 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🔄 Подключаемся к серверу как root..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        puts "📝 Вводим пароль..."
+        send "$password\r"
+        expect {
+            "# " {
+                puts "✅ Root доступ получен!"
+                send "whoami && pwd && ls -la\r"
+                expect "# "
+                send "find /home -name \"invite_tracker.py\" 2>/dev/null | head -5\r"
+                expect "# "
+                puts "✅ Проверка завершена"
+            }
+            "$ " {
+                puts "✅ Доступ получен (не root)"
+                send "whoami && pwd && ls -la\r"
+                expect "$ "
+                send "find . -name \"invite_tracker.py\" 2>/dev/null | head -5\r"
+                expect "$ "
+                puts "✅ Проверка завершена"
+            }
+            "Permission denied" {
+                puts "❌ Неверный пароль"
+            }
+            timeout {
+                puts "⏰ Таймаут выполнения"
+            }
+        }
+    }
+    "Permission denied" {
+        puts "❌ Отказ в доступе"
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+    }
+}

@@ -1,0 +1,54 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🔄 Унифицируем работу с Google Sheets..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Изменяем member bot чтобы он работал только с листом Members
+        send "cd \"/root/beget_deployment 2\" && cp invite_tracker.py bot.py\r"
+        expect "# "
+        
+        # Исправляем переменные
+        send "sed -i \"s/TELEGRAM_BOT_TOKEN = .*/TELEGRAM_BOT_TOKEN = '8566507218:AAEG5ifQrdlvMH3cWA5eMSRW6p7wacIAy10'/\" bot.py\r"
+        expect "# "
+        
+        send "sed -i \"s/SPREADSHEET_NAME = .*/SPREADSHEET_NAME = 'ShepoitBukmekera'/\" bot.py\r"
+        expect "# "
+        
+        # Убираем работу с листом Links
+        send "sed -i '/links_sheet = /d' bot.py\r"
+        expect "# "
+        
+        send "sed -i '/update_invite_links/,/^$/{d}' bot.py\r"
+        expect "# "
+        
+        # Убираем job из main
+        send "sed -i '/app.job_queue/,/first=10/d' bot.py\r"
+        expect "# "
+        
+        # Проверяем результат
+        send "head -25 bot.py\r"
+        expect "# "
+        
+        puts "✅ Member bot унифицирован"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

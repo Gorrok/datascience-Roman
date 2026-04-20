@@ -95,3 +95,6 @@ tmp/
 # Config files with sensitive data
 config.ini
 secrets.json
+
+# Ignore n8n credentials
+superagent/n8n_credentials.json

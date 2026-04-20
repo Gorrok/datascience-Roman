@@ -1,0 +1,44 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🎯 Финальная проверка бота..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Проверяем статус
+        send "cd /root/invite_bot && cat bot.pid && ps aux | grep python | grep invite_tracker | grep -v grep\r"
+        expect "# "
+        
+        # Проверяем логи
+        send "echo '=== Последние логи ===' && tail -10 logs/bot_output.log\r"
+        expect "# "
+        
+        # Тестируем подключение к Google Sheets
+        send "source /root/bot_env/bin/activate && python3 -c \"import gspread; from oauth2client.service_account import ServiceAccountCredentials; from invite_tracker import SPREADSHEET_NAME; scope=['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']; creds=ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope); client=gspread.authorize(creds); spreadsheet=client.open(SPREADSHEET_NAME); print('✅ Google Sheets подключен:', SPREADSHEET_NAME)\" 2>/dev/null || echo '❌ Ошибка Google Sheets'\r"
+        expect "# "
+        
+        # Тестируем Telegram
+        send "source /root/bot_env/bin/activate && python3 -c \"import asyncio; from telegram import Bot; from invite_tracker import TELEGRAM_BOT_TOKEN; async def test(): bot=Bot(token=TELEGRAM_BOT_TOKEN); info=await bot.get_me(); print('✅ Telegram подключен:', '@'+info.username); asyncio.run(test())\" 2>/dev/null || echo '❌ Ошибка Telegram'\r"
+        expect "# "
+        
+        puts "🎉 Все проверки завершены!"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

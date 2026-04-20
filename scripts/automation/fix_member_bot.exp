@@ -1,0 +1,52 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🔧 Исправляем member bot..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Копируем правильный файл
+        send "cd '/root/beget_deployment 2' && cp invite_tracker.py bot.py\r"
+        expect "# "
+        
+        # Проверяем содержимое
+        send "ls -la bot.py\r"
+        expect "# "
+        
+        # Останавливаем старый процесс
+        send "pkill -f 'beget_deployment 2' || echo 'Процессы остановлены'\r"
+        expect "# "
+        
+        # Запускаем member bot
+        send "cd '/root/beget_deployment 2' && source /root/bot_env/bin/activate && python bot.py > logs/bot_output.log 2>&1 &\r"
+        expect "# "
+        
+        # Проверяем
+        send "sleep 3 && ps aux | grep python | grep -v grep\r"
+        expect "# "
+        
+        # Проверяем логи
+        send "tail -5 logs/bot_output.log\r"
+        expect "# "
+        
+        puts "✅ Member bot исправлен"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

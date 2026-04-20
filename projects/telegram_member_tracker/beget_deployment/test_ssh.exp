@@ -1,0 +1,49 @@
+#!/usr/bin/expect -f
+
+set timeout 10
+set hostname "romamu7r.beget.tech"
+set username "romamu7r"
+set password "+2Z_fBbzk5PG"
+
+puts "🔄 Подключаемся к $hostname как $username..."
+
+spawn ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 $username@$hostname
+expect {
+    "password:" {
+        puts "📝 Вводим пароль..."
+        send "$password\r"
+        expect {
+            "$ " {
+                puts "✅ Подключение успешно!"
+                send "pwd\r"
+                expect "$ "
+                send "ls -la\r"
+                expect "$ "
+                send "find . -name \"invite_tracker.py\" 2>/dev/null || echo 'Файл не найден'\r"
+                expect "$ "
+                puts "✅ Команды выполнены"
+            }
+            "Permission denied" {
+                puts "❌ Неверный пароль"
+            }
+            timeout {
+                puts "⏰ Таймаут при выполнении команд"
+            }
+        }
+    }
+    "Permission denied" {
+        puts "❌ Отказ в доступе (возможно, пароль неверный)"
+    }
+    "Welcome to LTD BeGet" {
+        puts "✅ Сервер ответил"
+        expect "password:"
+        puts "📝 Запрос пароля получен"
+        send "$password\r"
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+    }
+    eof {
+        puts "🔚 Соединение закрыто"
+    }
+}

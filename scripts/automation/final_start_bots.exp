@@ -1,0 +1,54 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🚀 Запускаем оба бота..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Останавливаем все старые процессы
+        send "pkill -f invite_tracker.py && pkill -f bot.py || echo 'Процессы остановлены'\r"
+        expect "# "
+        
+        # Запускаем invite tracker
+        send "cd /root/invite_bot && source /root/bot_env/bin/activate && python invite_tracker.py > logs/bot_output.log 2>&1 &\r"
+        expect "# "
+        send "INVITE_PID=\$! && echo \"Invite Tracker запущен с PID: \$INVITE_PID\"\r"
+        expect "# "
+        
+        # Запускаем member tracker
+        send "cd \"/root/beget_deployment 2\" && source /root/bot_env/bin/activate && python bot.py > logs/bot_output.log 2>&1 &\r"
+        expect "# "
+        send "MEMBER_PID=\$! && echo \"Member Tracker запущен с PID: \$MEMBER_PID\"\r"
+        expect "# "
+        
+        # Ждем и проверяем статус
+        send "sleep 5\r"
+        expect "# "
+        
+        send "echo '=== СТАТУС ПРОЦЕССОВ ===' && ps aux | grep python | grep -v grep\r"
+        expect "# "
+        
+        send "echo '=== ПОСЛЕДНИЕ ЛОГИ ===' && tail -5 /root/invite_bot/logs/bot_output.log && echo '---' && tail -5 \"/root/beget_deployment 2/logs/bot_output.log\"\r"
+        expect "# "
+        
+        puts "🎉 Оба бота запущены!"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

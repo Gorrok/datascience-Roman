@@ -1,0 +1,84 @@
+#!/usr/bin/expect -f
+# Автоматическое исправление и перезапуск бота на Beget
+
+set timeout 30
+
+# Данные для подключения - ЗАМЕНИТЕ НА СВОИ!
+set beget_user "YOUR_USERNAME"
+set beget_host "YOUR_HOST.beget.tech"
+set beget_pass "YOUR_PASSWORD"
+
+# Проверка параметров
+if {$beget_user == "YOUR_USERNAME"} {
+    puts "ОШИБКА: Отредактируйте скрипт и укажите свои данные для подключения!"
+    exit 1
+}
+
+puts "\n=== Подключение к Beget ===\n"
+
+spawn ssh $beget_user@$beget_host
+
+expect {
+    "password:" {
+        send "$beget_pass\r"
+    }
+    "yes/no" {
+        send "yes\r"
+        exp_continue
+    }
+    timeout {
+        puts "Ошибка: таймаут подключения"
+        exit 1
+    }
+}
+
+expect "$ "
+puts "\n=== Переход в папку бота ===\n"
+send "cd /home/telegram-bot/bot2\r"
+
+expect "$ "
+puts "\n=== Остановка всех процессов бота ===\n"
+send "pkill -9 -f invite_tracker_bot2\r"
+
+expect "$ "
+send "sleep 2\r"
+
+expect "$ "
+puts "\n=== Проверка что процессы остановлены ===\n"
+send "ps aux | grep invite_tracker_bot2 | grep -v grep\r"
+
+expect "$ "
+puts "\n=== Активация venv ===\n"
+send "source venv2/bin/activate\r"
+
+expect "$ "
+puts "\n=== Удаление старого лог-файла ===\n"
+send "rm -f nohup.out\r"
+
+expect "$ "
+puts "\n=== Запуск бота ===\n"
+send "nohup python3 invite_tracker_bot2.py &\r"
+
+expect "$ "
+send "sleep 3\r"
+
+expect "$ "
+puts "\n=== Сохранение PID ===\n"
+send "echo \$! > bot.pid\r"
+
+expect "$ "
+puts "\n=== Проверка запущенных процессов ===\n"
+send "ps aux | grep invite_tracker_bot2 | grep -v grep\r"
+
+expect "$ "
+send "sleep 2\r"
+
+expect "$ "
+puts "\n=== Проверка логов ===\n"
+send "tail -30 nohup.out\r"
+
+expect "$ "
+puts "\n=== Готово! Бот перезапущен ===\n"
+send "exit\r"
+
+expect eof

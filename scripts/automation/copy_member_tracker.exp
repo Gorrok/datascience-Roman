@@ -1,0 +1,52 @@
+#!/usr/bin/expect -f
+
+set timeout 60
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "📤 Копируем Member Tracker на сервер..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Переходим в директорию
+        send "cd \"/root/beget_deployment 2\"\r"
+        expect "# "
+        
+        # Создаем bot.py из содержимого файла
+        send "cat > bot.py << 'BOT_EOF'\r"
+        
+        # Читаем содержимое файла и отправляем его
+        set file [open "simple_member_tracker.py" r]
+        set content [read $file]
+        close $file
+        
+        # Отправляем содержимое по строкам
+        foreach line [split $content "\n"] {
+            send "$line\r"
+        }
+        
+        send "BOT_EOF\r"
+        expect "# "
+        
+        # Проверяем файл
+        send "ls -la bot.py && python3 -m py_compile bot.py && echo '✅ Member Tracker создан успешно'\r"
+        expect "# "
+        
+        puts "🎉 Member Tracker скопирован!"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

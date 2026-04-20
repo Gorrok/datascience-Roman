@@ -1,0 +1,76 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🔄 Подключаемся к $hostname как $username..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        puts "📝 Вводим пароль..."
+        send "$password\r"
+        expect {
+            "# " {
+                puts "✅ Root доступ получен!"
+                
+                # Проверяем систему
+                send "whoami && pwd && uname -a\r"
+                expect "# "
+                
+                # Ищем файлы бота
+                send "find /home -name \"invite_tracker.py\" -o -name \"beget_deployment\" 2>/dev/null\r"
+                expect "# "
+                
+                # Проверяем Python
+                send "python3 --version && which python3\r"
+                expect "# "
+                
+                # Проверяем pip
+                send "pip3 --version && which pip3\r"
+                expect "# "
+                
+                puts "✅ Система проверена"
+                
+                # Устанавливаем зависимости
+                send "pip3 install python-telegram-bot gspread oauth2client\r"
+                expect "# "
+                puts "✅ Зависимости установлены"
+                
+                # Переходим в директорию бота
+                send "cd /home && ls -la\r"
+                expect "# "
+                
+                # Ищем и запускаем бота
+                send "find . -name \"invite_tracker.py\" -exec dirname {} \\; | head -1\r"
+                expect "# "
+                send "BOT_DIR=\$(find . -name \"invite_tracker.py\" -exec dirname {} \\; | head -1) && cd \$BOT_DIR && pwd && ls -la\r"
+                expect "# "
+                
+                # Запускаем бота
+                send "cd \$(find . -name \"invite_tracker.py\" -exec dirname {} \\; | head -1) && python3 invite_tracker.py > bot_output.log 2>&1 & echo \$! > bot.pid\r"
+                expect "# "
+                puts "✅ Бот запущен!"
+                
+                # Проверяем статус
+                send "sleep 3 && cat bot.pid && ps aux | grep python3\r"
+                expect "# "
+                
+                puts "🎉 Развертывание завершено!"
+                
+            }
+            timeout {
+                puts "⏰ Таймаут выполнения команд"
+            }
+        }
+    }
+    "Permission denied" {
+        puts "❌ Отказ в доступе"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

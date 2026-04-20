@@ -1,0 +1,15 @@
+# Telegram Bot API
+TELEGRAM_BOT_TOKEN=ваш_токен_бота_здесь
+
+# Каналы для отслеживания (через запятую)
+MONITORED_CHANNELS=@channel1,@channel2
+
+# Google Sheets API
+GOOGLE_SHEETS_CREDENTIALS_PATH=credentials.json
+GOOGLE_SHEETS_SPREADSHEET_ID=1IOqcxV7aP8eJ7Iil-XlkRGuGB6_EVVtNcQyoo111eWA
+GOOGLE_SHEETS_MEMBERS_SHEET=members
+GOOGLE_SHEETS_ACTIVITY_SHEET=activity
+
+# Логирование
+LOG_LEVEL=INFO
+LOG_FILE=logs/bot.log

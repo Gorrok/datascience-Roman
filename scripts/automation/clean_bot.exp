@@ -1,0 +1,40 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🧹 Очищаем код бота..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Удаляем дублирующуюся функцию main
+        send "cd \"/root/beget_deployment 2\" && sed -i '/async def main():/,/asyncio.get_event_loop().run_until_complete(main())/d' bot.py\r"
+        expect "# "
+        
+        # Удаляем старую функцию update_invite_links
+        send "sed -i '/async def update_invite_links/,/^$/d' bot.py\r"
+        expect "# "
+        
+        # Проверяем результат
+        send "tail -20 bot.py\r"
+        expect "# "
+        
+        puts "✅ Код очищен"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

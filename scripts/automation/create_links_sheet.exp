@@ -1,0 +1,40 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "📊 Создаем лист Links в Google Sheets..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Проверяем существующие листы
+        send "cd \"/root/beget_deployment 2\" && source /root/bot_env/bin/activate && python3 -c \"import gspread; from oauth2client.service_account import ServiceAccountCredentials; scope=['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']; creds=ServiceAccountCredentials.from_json_keyfile_name('credentials1.json', scope); client=gspread.authorize(creds); spreadsheet=client.open('ShepoitBukmekera'); print('Листы:', [ws.title for ws in spreadsheet.worksheets()])\"\r"
+        expect "# "
+        
+        # Создаем лист Links если его нет
+        send "python3 -c \"import gspread; from oauth2client.service_account import ServiceAccountCredentials; scope=['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']; creds=ServiceAccountCredentials.from_json_keyfile_name('credentials1.json', scope); client=gspread.authorize(creds); spreadsheet=client.open('ShepoitBukmekera'); try: spreadsheet.worksheet('Links'); print('Лист Links уже существует'); except: spreadsheet.add_worksheet(title='Links', rows=1000, cols=4); print('Лист Links создан')\"\r"
+        expect "# "
+        
+        # Проверяем снова
+        send "python3 -c \"import gspread; from oauth2client.service_account import ServiceAccountCredentials; scope=['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']; creds=ServiceAccountCredentials.from_json_keyfile_name('credentials1.json', scope); client=gspread.authorize(creds); spreadsheet=client.open('ShepoitBukmekera'); print('Все листы:', [ws.title for ws in spreadsheet.worksheets()])\"\r"
+        expect "# "
+        
+        puts "✅ Лист Links готов"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

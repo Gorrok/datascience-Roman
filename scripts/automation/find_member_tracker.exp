@@ -1,0 +1,40 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🔍 Ищем Member Tracker..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Ищем все Python файлы
+        send "find /root -name \"*.py\" | grep -v venv | grep -v __pycache__ | head -20\r"
+        expect "# "
+        
+        # Проверяем содержимое папок
+        send "echo '=== СОДЕРЖИМОЕ ПАПОК ===' && ls -la /root/ | grep -E '(invite|beget|member)' && ls -la \"/root/beget_deployment 2/\"\r"
+        expect "# "
+        
+        # Проверяем, есть ли member tracker код в invite_tracker.py из beget_deployment
+        send "echo '=== ПРОВЕРКА invite_tracker.py из beget_deployment ===' && head -20 \"/root/beget_deployment 2/invite_tracker.py\" && echo '...' && tail -10 \"/root/beget_deployment 2/invite_tracker.py\"\r"
+        expect "# "
+        
+        puts "✅ Поиск завершен"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

@@ -1,0 +1,44 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🎯 Проверяем финальную работу Invite Tracker..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Проверяем статус процесса
+        send "ps aux | grep invite_tracker | grep -v grep\r"
+        expect "# "
+        
+        # Проверяем логи
+        send "tail -10 /root/invite_bot/logs/bot_output.log\r"
+        expect "# "
+        
+        # Проверяем настройки таблицы
+        send "cd /root/invite_bot && grep 'SPREADSHEET_NAME' invite_tracker.py\r"
+        expect "# "
+        
+        # Тестируем подключение к таблице
+        send "source /root/bot_env/bin/activate && python3 -c \"import gspread; from oauth2client.service_account import ServiceAccountCredentials; scope=['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']; creds=ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope); client=gspread.authorize(creds); spreadsheet=client.open('TelegramInviteTracking'); print(f'✅ Подключено к таблице: {spreadsheet.title}'); members_sheet=spreadsheet.worksheet('Members'); data=members_sheet.get_all_values(); print(f'📊 Лист Members: {len(data)} записей')\" 2>/dev/null || echo '❌ Ошибка подключения'\r"
+        expect "# "
+        
+        puts "✅ Проверка завершена"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

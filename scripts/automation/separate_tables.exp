@@ -1,0 +1,44 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🔄 Разделяем таблицы для ботов..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Останавливаем member tracker
+        send "pkill -f 'beget_deployment 2' || echo 'Процессы остановлены'\r"
+        expect "# "
+        
+        # Меняем таблицу для member tracker
+        send "cd \"/root/beget_deployment 2\" && sed -i \"s/SPREADSHEET_NAME = 'ShepoitBukmekera'/SPREADSHEET_NAME = 'MemberTracking'/'\" bot.py\r"
+        expect "# "
+        
+        # Меняем имя листа
+        send "sed -i 's/worksheet(\"Members\")/worksheet(\"Participants\")/' bot.py\r"
+        expect "# "
+        
+        # Проверяем изменения
+        send "grep -n 'SPREADSHEET_NAME\|worksheet' bot.py\r"
+        expect "# "
+        
+        puts "✅ Настройки изменены"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

@@ -1,0 +1,48 @@
+#!/usr/bin/expect -f
+
+set timeout 60
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "📤 Передаем исправление на сервер..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Создаем скрипт исправления
+        send "cat > server_fix.sh << 'SCRIPT_EOF'\r"
+        
+        # Читаем локальный файл и отправляем
+        set file [open "server_fix.sh" r]
+        set content [read $file]
+        close $file
+        
+        # Отправляем содержимое
+        foreach line [split $content "\n"] {
+            send "$line\r"
+        }
+        
+        send "SCRIPT_EOF\r"
+        expect "# "
+        
+        # Запускаем скрипт
+        send "chmod +x server_fix.sh && ./server_fix.sh\r"
+        expect "# "
+        
+        puts "🎉 Исправление применено!"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

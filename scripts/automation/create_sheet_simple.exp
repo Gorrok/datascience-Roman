@@ -1,0 +1,70 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "📊 Создаем лист Links..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Создаем простой Python скрипт на сервере
+        send "cd \"/root/beget_deployment 2\" && cat > create_links.py << 'PYEOF'\r"
+        expect "> "
+        send "import gspread\r"
+        expect "> "
+        send "from oauth2client.service_account import ServiceAccountCredentials\r"
+        expect "> "
+        send "\r"
+        expect "> "
+        send "scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']\r"
+        expect "> "
+        send "creds = ServiceAccountCredentials.from_json_keyfile_name('credentials1.json', scope)\r"
+        expect "> "
+        send "client = gspread.authorize(creds)\r"
+        expect "> "
+        send "spreadsheet = client.open('ShepoitBukmekera')\r"
+        expect "> "
+        send "\r"
+        expect "> "
+        send "print('Листы:', [ws.title for ws in spreadsheet.worksheets()])\r"
+        expect "> "
+        send "\r"
+        expect "> "
+        send "try:\r"
+        expect "> "
+        send "    spreadsheet.worksheet('Links')\r"
+        expect "> "
+        send "    print('Лист Links уже существует')\r"
+        expect "> "
+        send "except:\r"
+        expect "> "
+        send "    spreadsheet.add_worksheet(title='Links', rows=1000, cols=4)\r"
+        expect "> "
+        send "    print('Лист Links создан')\r"
+        expect "> "
+        send "PYEOF\r"
+        expect "# "
+        
+        # Запускаем скрипт
+        send "source /root/bot_env/bin/activate && python create_links.py\r"
+        expect "# "
+        
+        puts "✅ Лист Links готов"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

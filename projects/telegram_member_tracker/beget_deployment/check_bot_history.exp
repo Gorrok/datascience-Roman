@@ -1,0 +1,44 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "📋 Проверяем историю работы ботов..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Проверяем логи invite_tracker
+        send "echo '=== ЛОГИ INVITE TRACKER ===' && ls -la /root/invite_bot/logs/ && cat /root/invite_bot/logs/bot_output.log | head -5 && echo '...' && tail -5 /root/invite_bot/logs/bot_output.log\r"
+        expect "# "
+        
+        # Проверяем логи member_tracker
+        send "echo '=== ЛОГИ MEMBER TRACKER ===' && ls -la \"/root/beget_deployment 2/logs/\" 2>/dev/null && cat \"/root/beget_deployment 2/logs/bot_output.log\" 2>/dev/null | head -5 && echo '...' && tail -5 \"/root/beget_deployment 2/logs/bot_output.log\" 2>/dev/null\r"
+        expect "# "
+        
+        # Проверяем время создания файлов
+        send "echo '=== ВРЕМЯ СОЗДАНИЯ ФАЙЛОВ ===' && stat /root/invite_bot/bot.pid && stat \"/root/beget_deployment 2/bot.pid\" 2>/dev/null\r"
+        expect "# "
+        
+        # Проверяем системные логи
+        send "echo '=== СИСТЕМНЫЕ ЛОГИ ===' && grep -i python /var/log/syslog | tail -10\r"
+        expect "# "
+        
+        puts "✅ Проверка истории завершена"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

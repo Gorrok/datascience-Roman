@@ -1,0 +1,109 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🔧 Финальный ремонт ботов..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Исправляем Invite Tracker - делаем main async
+        send "cd /root/invite_bot && sed -i 's/def main()/async def main()/' invite_tracker.py\r"
+        expect "# "
+        
+        # Создаем Member Tracker файл
+        send "cd \"/root/beget_deployment 2\" && cat > bot.py << 'MEMBER_EOF'\r"
+        expect "> "
+        send "import os\r"
+        expect "> "
+        send "import asyncio\r"
+        expect "> "
+        send "from telegram import Update, ChatMember, ChatMemberUpdated\r"
+        expect "> "
+        send "from telegram.ext import Application, ChatMemberHandler, ContextTypes\r"
+        expect "> "
+        send "from dotenv import load_dotenv\r"
+        expect "> "
+        send "from loguru import logger\r"
+        expect "> "
+        send "from datetime import datetime\r"
+        expect "> "
+        send "\r"
+        expect "> "
+        send "load_dotenv()\r"
+        expect "> "
+        send "logger.add('logs/bot.log', level='INFO')\r"
+        expect "> "
+        send "\r"
+        expect "> "
+        send "class SimpleBot:\r"
+        expect "> "
+        send "    def __init__(self):\r"
+        expect "> "
+        send "        self.token = os.getenv('TELEGRAM_BOT_TOKEN')\r"
+        expect "> "
+        send "        self.channels = ['ваш_канал']\r"
+        expect "> "
+        send "    \r"
+        expect "> "
+        send "    async def handle_update(self, update: Update, context: ContextTypes.DEFAULT_TYPE):\r"
+        expect "> "
+        send "        if update.chat_member:\r"
+        expect "> "
+        send "            logger.info('Member update received')\r"
+        expect "> "
+        send "    \r"
+        expect "> "
+        send "    async def run(self):\r"
+        expect "> "
+        send "        app = Application.builder().token(self.token).build()\r"
+        expect "> "
+        send "        app.add_handler(ChatMemberHandler(self.handle_update, ChatMemberHandler.CHAT_MEMBER))\r"
+        expect "> "
+        send "        logger.info('Simple Member Tracker started')\r"
+        expect "> "
+        send "        await app.run_polling()\r"
+        expect "> "
+        send "\r"
+        expect "> "
+        send "async def main():\r"
+        expect "> "
+        send "    bot = SimpleBot()\r"
+        expect "> "
+        send "    await bot.run()\r"
+        expect "> "
+        send "\r"
+        expect "> "
+        send "if __name__ == '__main__':\r"
+        expect "> "
+        send "    asyncio.run(main())\r"
+        expect "> "
+        send "MEMBER_EOF\r"
+        expect "# "
+        
+        # Проверяем исправления
+        send "cd /root/invite_bot && python3 -m py_compile invite_tracker.py && echo '✅ Invite исправлен'\r"
+        expect "# "
+        
+        send "cd \"/root/beget_deployment 2\" && python3 -m py_compile bot.py && echo '✅ Member создан'\r"
+        expect "# "
+        
+        puts "🎉 Ремонт завершен"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

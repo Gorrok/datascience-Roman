@@ -1,0 +1,44 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🔧 Исправляем отступы..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Проверяем проблемные строки
+        send "cd \"/root/beget_deployment 2\" && sed -n '45,55p' bot.py\r"
+        expect "# "
+        
+        # Исправляем отступы
+        send "sed -i '45,55d' bot.py\r"
+        expect "# "
+        
+        # Добавляем правильную функцию main
+        send "sed -i '\$a # Главная точка входа\\ndef main():\\n    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()\\n    app.add_handler(ChatJoinRequestHandler(handle_join_request))\\n    \\n    app.run_polling()\\n\\nif __name__ == \"__main__\":\\n    main()' bot.py\r"
+        expect "# "
+        
+        # Проверяем исправление
+        send "tail -15 bot.py\r"
+        expect "# "
+        
+        puts "✅ Отступы исправлены"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

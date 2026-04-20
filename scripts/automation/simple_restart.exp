@@ -1,0 +1,38 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set hostname "93.189.230.247"
+set username "root"  
+set password "+2Z_fBbzk5PG"
+
+puts "🔄 Перезапускаем ботов..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Простая команда - запускаем ботов напрямую
+        send "cd /root/invite_bot && source /root/bot_env/bin/activate && python invite_tracker.py > logs/bot_output.log 2>&1 &\r"
+        expect "# "
+        send "cd '/root/beget_deployment 2' && source /root/bot_env/bin/activate && python bot.py > logs/bot_output.log 2>&1 &\r"
+        expect "# "
+        
+        # Проверяем процессы
+        send "sleep 2 && ps aux | grep python | grep -v grep\r"
+        expect "# "
+        
+        puts "✅ Боты запущены"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}

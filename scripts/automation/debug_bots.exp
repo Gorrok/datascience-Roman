@@ -1,0 +1,107 @@
+#!/usr/bin/expect -f
+
+set timeout 60
+set hostname "93.189.230.247"
+set username "root"
+set password "+2Z_fBbzk5PG"
+
+puts "🔍 Диагностика ботов..."
+spawn ssh -o StrictHostKeyChecking=no $username@$hostname
+expect {
+    "password:" {
+        send "$password\r"
+        expect "# "
+        
+        puts "✅ Подключение успешно"
+        
+        # Проверяем статус сервисов
+        send "echo '=== СТАТУС СЕРВИСОВ ===' && systemctl status invite-tracker.service --no-pager && echo '---' && systemctl status member-tracker.service --no-pager\r"
+        expect "# "
+        
+        # Смотрим логи systemd
+        send "echo '=== ЛОГИ INVITE TRACKER (последние 20 строк) ===' && journalctl -u invite-tracker.service -n 20 --no-pager\r"
+        expect "# "
+        
+        send "echo '=== ЛОГИ MEMBER TRACKER (последние 20 строк) ===' && journalctl -u member-tracker.service -n 20 --no-pager\r"
+        expect "# "
+        
+        # Проверяем наличие процессов
+        send "echo '=== ПРОЦЕССЫ PYTHON ===' && ps aux | grep python | grep -v grep\r"
+        expect "# "
+        
+        # Проверяем файлы логов
+        send "echo '=== ФАЙЛЫ ЛОГОВ ===' && ls -la /root/invite_bot/logs/ 2>/dev/null && ls -la \"/root/beget_deployment 2/logs/\" 2>/dev/null\r"
+        expect "# "
+        
+        # Тестируем подключение к Telegram
+        send "echo '=== ТЕСТ TELEGRAM ===' && source /root/bot_env/bin/activate && python3 -c "
+import asyncio
+from telegram import Bot
+from invite_tracker import TELEGRAM_BOT_TOKEN
+
+async def test():
+    try:
+        bot = Bot(token=TELEGRAM_BOT_TOKEN)
+        info = await bot.get_me()
+        print(f'✅ Бот: @{info.username} (ID: {info.id})')
+        
+        # Проверяем канал
+        try:
+            chat = await bot.get_chat(-1001225013297)
+            print(f'✅ Канал найден: {chat.title}')
+            print(f'✅ Тип: {chat.type}')
+            print(f'✅ Кол-во участников: {chat.member_count if hasattr(chat, "member_count") else "N/A"}')
+        except Exception as e:
+            print(f'❌ Ошибка доступа к каналу: {e}')
+            
+    except Exception as e:
+        print(f'❌ Ошибка Telegram: {e}')
+
+asyncio.run(test())
+" 2>/dev/null\r"
+        expect "# "
+        
+        # Тестируем Google Sheets
+        send "echo '=== ТЕСТ GOOGLE SHEETS ===' && source /root/bot_env/bin/activate && python3 -c "
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+from invite_tracker import SPREADSHEET_NAME
+
+try:
+    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+    creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+    client = gspread.authorize(creds)
+    
+    spreadsheet = client.open(SPREADSHEET_NAME)
+    print(f'✅ Таблица открыта: {SPREADSHEET_NAME}')
+    
+    worksheets = spreadsheet.worksheets()
+    print(f'📊 Листы: {[ws.title for ws in worksheets]}')
+    
+    # Проверяем Members лист
+    members_sheet = spreadsheet.worksheet('Members')
+    members_data = members_sheet.get_all_values()
+    print(f'📝 Members лист: {len(members_data)} строк')
+    
+    if len(members_data) > 0:
+        print(f'📋 Заголовки: {members_data[0]}')
+        if len(members_data) > 1:
+            print(f'📋 Последняя запись: {members_data[-1]}')
+    
+except Exception as e:
+    print(f'❌ Ошибка Google Sheets: {e}')
+" 2>/dev/null\r"
+        expect "# "
+        
+        puts "🎯 Диагностика завершена"
+        
+    }
+    "Permission denied" {
+        puts "❌ Ошибка аутентификации"
+        exit 1
+    }
+    timeout {
+        puts "⏰ Таймаут подключения"
+        exit 1
+    }
+}
