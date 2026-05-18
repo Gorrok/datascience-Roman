@@ -1,0 +1,119 @@
+---
+description: Правила безопасности для предотвращения утечки секретов
+alwaysApply: true
+---
+
+# 🔒 Правила безопасности
+
+## КРИТИЧЕСКИ ВАЖНО: Никогда не коммитьте секреты!
+
+### ❌ ЗАПРЕЩЕНО коммитить:
+
+1. **Файлы с секретами:**
+   - `secrets.py` (только .example версии!)
+   - `*.session` (Telegram/Pyrogram сессии)
+   - `*.session-journal`
+   - `.env`, `.env.local`, `.env.production`
+   - `credentials.json`, `service-account.json`
+   - `*.pem`, `*.key` (приватные ключи)
+   - `config.ini` (с секретами)
+
+2. **Строки с секретами:**
+   - API ключи: `api_key = "AIzaSy..."`
+   - Токены: `token = "ghp_..."`
+   - Пароли: `password = "..."`
+   - Хэши: `api_hash = "abcdef123..."`
+   - AWS ключи: `aws_secret_access_key = "..."`
+
+### ✅ ПРАВИЛЬНО делать:
+
+1. **Используйте .example файлы:**
+   ```python
+   # secrets.py.example ✅
+   API_KEY = "your_api_key_here"
+   SECRET = "your_secret_here"
+   ```
+
+2. **Импортируйте из secrets.py:**
+   ```python
+   # config.py
+   try:
+       from secrets import API_KEY, SECRET
+   except ImportError:
+       print("Создайте secrets.py из secrets.py.example")
+   ```
+
+3. **Добавляйте в .gitignore:**
+   ```gitignore
+   secrets.py
+   *.session
+   .env
+   credentials.json
+   ```
+
+4. **Используйте переменные окружения:**
+   ```python
+   import os
+   API_KEY = os.getenv("API_KEY")
+   ```
+
+### 🤖 При работе с AI:
+
+**НИКОГДА не показывайте AI:**
+- Реальные API ключи
+- Токены доступа
+- Пароли
+- Приватные ключи
+
+**Вместо этого используйте плейсхолдеры:**
+```python
+API_KEY = "your_api_key_here"  # ✅
+API_KEY = "AIzaSyBoLtzWJNGJ..."  # ❌ НИКОГДА!
+```
+
+### 🔍 Перед коммитом ВСЕГДА проверяйте:
+
+```bash
+# 1. Что будет закоммичено
+git status
+git diff --staged
+
+# 2. Нет ли секретов
+git diff --staged | grep -i "api_key\|secret\|password\|token"
+
+# 3. Коммитьте
+git commit -m "..."
+```
+
+### 🛡️ Защита установлена:
+
+1. **Pre-commit hook** - автоматически проверяет перед коммитом
+2. **.gitignore** - блокирует опасные файлы
+3. **Это правило** - напоминание для AI и разработчика
+
+### ⚠️ Если случайно закоммитили секрет:
+
+```bash
+# 1. НЕ пушьте!
+# 2. Удалите из последнего коммита
+git reset HEAD~1
+git add <безопасные файлы>
+git commit -m "..."
+
+# 3. Если уже запушили:
+# - Отзовите ВСЕ ключи немедленно!
+# - Очистите историю git filter-branch
+# - Force push
+```
+
+### 📋 Checklist перед каждым коммитом:
+
+- [ ] Нет файлов `secrets.py`, `.env`, `credentials.json`
+- [ ] Нет `*.session` файлов
+- [ ] Нет строк с реальными API ключами
+- [ ] Все секреты в `.gitignore`
+- [ ] Используются `.example` файлы
+
+---
+
+## Помни: Один случайный коммит с секретами = компрометация всего проекта! 🚨
