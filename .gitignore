@@ -98,3 +98,17 @@ secrets.json
 
 # Ignore n8n credentials
 superagent/n8n_credentials.json
+
+# Secrets (global)
+**/secrets.py
+**/*.session
+**/*.session-journal
+.env
+.env.local
+.env.production
+credentials.json
+**/credentials.json
+
+# API Keys
+**/.env.*
+!**/.env.example
