@@ -5,19 +5,19 @@ def get_main_menu(mini_app_url: str) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(
-                text="🎯 Открыть планировщик",
+                text="Открыть планировщик",
                 web_app=WebAppInfo(url=mini_app_url)
             )
         ],
         [
             InlineKeyboardButton(
-                text="📋 Мои планы",
+                text="Мои планы",
                 callback_data="my_plans"
             )
         ],
         [
             InlineKeyboardButton(
-                text="📨 Инвайты",
+                text="Инвайты",
                 callback_data="my_invites"
             )
         ]
