@@ -56,7 +56,6 @@ processed_data/
 # Model files
 *.model
 *.joblib
-models/
 checkpoints/
 
 # Logs

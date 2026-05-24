@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import List
 
 from app.core.database import get_db
-from app.models.plan import Plan, Invite, InviteStatus as DBInviteStatus
+from app.models.plan import Plan, Invite
 from app.schemas.plan import (
     PlanCreate, PlanUpdate, PlanResponse,
     InviteCreate, InviteResponse, InviteStatus
@@ -39,7 +39,7 @@ async def get_plans(
                 select(Invite.plan_id).where(
                     and_(
                         Invite.to_user_id == user_id,
-                        Invite.status == DBInviteStatus.ACCEPTED
+                        Invite.status == "accepted"
                     )
                 )
             )
@@ -149,8 +149,7 @@ async def get_invites(
     query = select(Invite).where(Invite.to_user_id == user_id)
     
     if status:
-        db_status = DBInviteStatus[status.value.upper()]
-        query = query.where(Invite.status == db_status)
+        query = query.where(Invite.status == status.value)
     
     query = query.order_by(Invite.created_at.desc())
     
@@ -173,7 +172,7 @@ async def respond_to_invite(
     if not invite:
         raise HTTPException(status_code=404, detail="Invite not found")
     
-    db_status = DBInviteStatus[status.value.upper()]
+    db_status = status.value
     invite.status = db_status
     invite.responded_at = datetime.utcnow()
     
