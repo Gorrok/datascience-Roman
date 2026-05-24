@@ -2,12 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { api } from './api';
 import './App.css';
 
-const tg = window.Telegram.WebApp;
+const tg = window.Telegram?.WebApp || {
+  ready: () => {},
+  expand: () => {},
+  enableClosingConfirmation: () => {},
+  setHeaderColor: () => {},
+  setBackgroundColor: () => {},
+  BackButton: { hide: () => {} },
+  initDataUnsafe: {},
+  showAlert: (msg) => alert(msg),
+  showConfirm: (msg, cb) => cb(confirm(msg)),
+  showPopup: ({ message }) => alert(message),
+};
 
-function App() {
+export default function App() {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('plans'); // plans, wishes, create
+  const [activeTab, setActiveTab] = useState('plans');
   const [newPlan, setNewPlan] = useState({
     title: '',
     description: '',
@@ -15,23 +26,18 @@ function App() {
     planned_date: ''
   });
 
-  const userId = tg.initDataUnsafe?.user?.id || 123456; // Для тестирования
+  const userId = tg.initDataUnsafe?.user?.id || 123456;
   const userName = tg.initDataUnsafe?.user?.first_name || 'User';
-  const partnerId = userId === 123456 ? 789012 : 123456; // Второй пользователь
+  const partnerId = userId === 123456 ? 987654321 : 123456;
   const partnerName = userId === 123456 ? 'Катя' : 'Роман';
 
   useEffect(() => {
     tg.ready();
-    tg.expand(); // Разворачиваем на весь экран
-    tg.enableClosingConfirmation(); // Подтверждение при закрытии
-    
-    // Настраиваем цвета для Telegram
-    tg.setHeaderColor('#ff6b9d');
-    tg.setBackgroundColor('#ffeef8');
-    
-    // Скрываем кнопку назад
+    tg.expand();
+    tg.enableClosingConfirmation();
+    tg.setHeaderColor('#1d4ed8');
+    tg.setBackgroundColor('#f8fafc');
     tg.BackButton.hide();
-    
     loadPlans();
   }, []);
 
@@ -40,9 +46,8 @@ function App() {
       setLoading(true);
       const data = await api.getPlans(userId, false);
       setPlans(data);
-    } catch (error) {
-      console.error('Error loading plans:', error);
-      tg.showAlert('Ошибка загрузки планов');
+    } catch {
+      tg.showAlert('Не удалось загрузить планы');
     } finally {
       setLoading(false);
     }
@@ -50,39 +55,25 @@ function App() {
 
   const handleCreatePlan = async () => {
     if (!newPlan.title.trim()) {
-      tg.showAlert('Введите название плана');
+      tg.showAlert('Введите название');
       return;
     }
-
     try {
-      const planData = {
+      await api.createPlan({
         ...newPlan,
         created_by_id: userId,
         created_by_name: userName,
         planned_date: newPlan.planned_date || null
-      };
-
-      await api.createPlan(planData);
-      tg.showPopup({
-        message: 'План создан! 🎉',
-        buttons: [{ type: 'ok' }]
       });
-
-      setNewPlan({
-        title: '',
-        description: '',
-        plan_type: 'wish',
-        planned_date: ''
-      });
+      setNewPlan({ title: '', description: '', plan_type: 'wish', planned_date: '' });
       setActiveTab('plans');
       loadPlans();
-    } catch (error) {
-      console.error('Error creating plan:', error);
-      tg.showAlert('Ошибка создания плана');
+    } catch {
+      tg.showAlert('Ошибка при создании');
     }
   };
 
-  const handleInvitePartner = async (planId, planTitle) => {
+  const handleInvite = async (planId) => {
     try {
       await api.createInvite({
         plan_id: planId,
@@ -91,53 +82,49 @@ function App() {
         to_user_id: partnerId,
         to_user_name: partnerName
       });
-
-      tg.showPopup({
-        message: `Приглашение отправлено ${partnerName}! 💌`,
-        buttons: [{ type: 'ok' }]
-      });
-    } catch (error) {
-      console.error('Error sending invite:', error);
-      tg.showAlert('Ошибка отправки приглашения');
+      tg.showPopup({ message: `Приглашение отправлено — ${partnerName}`, buttons: [{ type: 'ok' }] });
+    } catch {
+      tg.showAlert('Ошибка при отправке');
     }
   };
 
-  const handleCompletePlan = async (planId) => {
+  const handleComplete = async (planId) => {
     try {
       await api.updatePlan(planId, { is_completed: true });
-      tg.showPopup({
-        message: 'Поздравляем! План выполнен 🎉',
-        buttons: [{ type: 'ok' }]
-      });
       loadPlans();
-    } catch (error) {
-      console.error('Error completing plan:', error);
-      tg.showAlert('Ошибка обновления плана');
+    } catch {
+      tg.showAlert('Ошибка при обновлении');
     }
   };
 
-  const handleDeletePlan = async (planId) => {
-    tg.showConfirm('Удалить этот план?', async (confirmed) => {
-      if (confirmed) {
+  const handleDelete = async (planId) => {
+    tg.showConfirm('Удалить план?', async (ok) => {
+      if (ok) {
         try {
           await api.deletePlan(planId);
           loadPlans();
-        } catch (error) {
-          console.error('Error deleting plan:', error);
-          tg.showAlert('Ошибка удаления плана');
+        } catch {
+          tg.showAlert('Ошибка при удалении');
         }
       }
     });
   };
 
   const wishes = plans.filter(p => p.plan_type === 'wish');
-  const scheduledPlans = plans.filter(p => p.plan_type === 'plan' && p.planned_date);
+  const scheduledPlans = plans.filter(p => p.plan_type === 'plan');
 
   if (loading) {
     return (
-      <div className="app">
-        <div className="loading">
-          <div>Загружаем ваши планы...</div>
+      <div className="splash">
+        <div className="splash-inner">
+          <div className="splash-logo">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+              <rect width="48" height="48" rx="14" fill="#1d4ed8"/>
+              <path d="M12 24L20 32L36 16" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <div className="splash-title">Планировщик</div>
+          <div className="splash-loader"><div></div></div>
         </div>
       </div>
     );
@@ -145,170 +132,161 @@ function App() {
 
   return (
     <div className="app">
+      {/* Header */}
       <header className="header">
-        <h1>💕 Наш планировщик</h1>
-        <p>Привет, {userName}!</p>
+        <div className="header-bg">
+          <div className="header-circle c1"></div>
+          <div className="header-circle c2"></div>
+          <div className="header-circle c3"></div>
+        </div>
+        <div className="header-content">
+          <div className="header-top">
+            <div className="header-logo">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                <rect width="32" height="32" rx="9" fill="rgba(255,255,255,0.2)"/>
+                <path d="M8 16L13 21L24 10" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="header-badge">{plans.length} планов</div>
+          </div>
+          <h1>Привет, {userName}</h1>
+          <p>Ваши совместные планы и желания</p>
+        </div>
       </header>
 
+      {/* Tabs */}
       <nav className="tabs">
-        <button
-          className={activeTab === 'plans' ? 'active' : ''}
-          onClick={() => setActiveTab('plans')}
-        >
-          📅 Планы ({scheduledPlans.length})
-        </button>
-        <button
-          className={activeTab === 'wishes' ? 'active' : ''}
-          onClick={() => setActiveTab('wishes')}
-        >
-          ✨ Хотелки ({wishes.length})
-        </button>
-        <button
-          className={activeTab === 'create' ? 'active' : ''}
-          onClick={() => setActiveTab('create')}
-        >
-          ➕ Создать
-        </button>
+        {[
+          { id: 'plans', label: 'Планы', count: scheduledPlans.length },
+          { id: 'wishes', label: 'Желания', count: wishes.length },
+          { id: 'create', label: 'Создать', count: null },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            className={activeTab === tab.id ? 'active' : ''}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+            {tab.count !== null && <span className="tab-count">{tab.count}</span>}
+          </button>
+        ))}
       </nav>
 
+      {/* Content */}
       <main className="content">
+
+        {/* Plans */}
         {activeTab === 'plans' && (
-          <div className="plans-list">
+          <div>
             {scheduledPlans.length === 0 ? (
-              <div className="empty" data-emoji="📅">
-                <p>Пока нет запланированных событий</p>
-                <p>Создайте план и назначьте дату!</p>
-              </div>
+              <EmptyState
+                title="Нет планов"
+                subtitle="Создайте первый совместный план"
+                icon="calendar"
+              />
             ) : (
-              scheduledPlans.map(plan => (
-                <div key={plan.id} className="plan-card">
-                  <div className="plan-header">
-                    <h3>{plan.title}</h3>
-                    <span className="plan-author">от {plan.created_by_name}</span>
-                  </div>
-                  {plan.description && (
-                    <p className="plan-description">{plan.description}</p>
-                  )}
-                  {plan.planned_date && (
-                    <p className="plan-date">
-                      📅 {new Date(plan.planned_date).toLocaleDateString('ru-RU')}
-                    </p>
-                  )}
-                  <div className="plan-actions">
-                    <button onClick={() => handleCompletePlan(plan.id)}>
-                      ✅ Выполнено
-                    </button>
-                    {plan.created_by_id === userId && (
-                      <>
-                        <button onClick={() => handleInvitePartner(plan.id, plan.title)}>
-                          💌 Пригласить
-                        </button>
-                        <button onClick={() => handleDeletePlan(plan.id)} className="delete">
-                          🗑️
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))
+              <div className="cards">
+                {scheduledPlans.map(plan => (
+                  <PlanCard
+                    key={plan.id}
+                    plan={plan}
+                    userId={userId}
+                    onInvite={handleInvite}
+                    onComplete={handleComplete}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
             )}
           </div>
         )}
 
+        {/* Wishes */}
         {activeTab === 'wishes' && (
-          <div className="plans-list">
+          <div>
             {wishes.length === 0 ? (
-              <div className="empty" data-emoji="✨">
-                <p>Пока нет хотелок</p>
-                <p>Добавьте что хотите сделать вместе!</p>
-              </div>
+              <EmptyState
+                title="Нет желаний"
+                subtitle="Запишите что хотите сделать вместе"
+                icon="star"
+              />
             ) : (
-              wishes.map(plan => (
-                <div key={plan.id} className="plan-card wish">
-                  <div className="plan-header">
-                    <h3>✨ {plan.title}</h3>
-                    <span className="plan-author">от {plan.created_by_name}</span>
-                  </div>
-                  {plan.description && (
-                    <p className="plan-description">{plan.description}</p>
-                  )}
-                  <div className="plan-actions">
-                    <button onClick={() => handleInvitePartner(plan.id, plan.title)}>
-                      💌 Пригласить
-                    </button>
-                    {plan.created_by_id === userId && (
-                      <button onClick={() => handleDeletePlan(plan.id)} className="delete">
-                        🗑️
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))
+              <div className="cards">
+                {wishes.map(plan => (
+                  <PlanCard
+                    key={plan.id}
+                    plan={plan}
+                    userId={userId}
+                    onInvite={handleInvite}
+                    onComplete={handleComplete}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
             )}
           </div>
         )}
 
+        {/* Create */}
         {activeTab === 'create' && (
           <div className="create-form">
-            <h2>Создать новый план</h2>
-            
-            <div className="form-group">
-              <label>Тип:</label>
-              <div className="radio-group">
-                <label>
-                  <input
-                    type="radio"
-                    value="wish"
-                    checked={newPlan.plan_type === 'wish'}
-                    onChange={(e) => setNewPlan({...newPlan, plan_type: e.target.value})}
-                  />
-                  ✨ Хотелка
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    value="plan"
-                    checked={newPlan.plan_type === 'plan'}
-                    onChange={(e) => setNewPlan({...newPlan, plan_type: e.target.value})}
-                  />
-                  📅 План
-                </label>
-              </div>
+            <div className="form-header">
+              <h2>Новый план</h2>
+              <p>Заполните детали</p>
             </div>
 
-            <div className="form-group">
-              <label>Название:</label>
+            <div className="type-selector">
+              {[
+                { value: 'wish', label: 'Желание', desc: 'Хочу когда-нибудь' },
+                { value: 'plan', label: 'План', desc: 'Конкретная дата' },
+              ].map(t => (
+                <div
+                  key={t.value}
+                  className={`type-card ${newPlan.plan_type === t.value ? 'active' : ''}`}
+                  onClick={() => setNewPlan({ ...newPlan, plan_type: t.value })}
+                >
+                  <div className="type-dot"></div>
+                  <div>
+                    <div className="type-label">{t.label}</div>
+                    <div className="type-desc">{t.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="field">
+              <label>Название</label>
               <input
                 type="text"
-                placeholder="Например: Сходить в кино"
+                placeholder="Например: поехать в горы"
                 value={newPlan.title}
-                onChange={(e) => setNewPlan({...newPlan, title: e.target.value})}
+                onChange={e => setNewPlan({ ...newPlan, title: e.target.value })}
               />
             </div>
 
-            <div className="form-group">
-              <label>Описание:</label>
+            <div className="field">
+              <label>Описание <span className="optional">необязательно</span></label>
               <textarea
-                placeholder="Дополнительная информация..."
+                placeholder="Детали, пожелания, заметки..."
                 value={newPlan.description}
-                onChange={(e) => setNewPlan({...newPlan, description: e.target.value})}
-                rows="3"
+                onChange={e => setNewPlan({ ...newPlan, description: e.target.value })}
+                rows={3}
               />
             </div>
 
             {newPlan.plan_type === 'plan' && (
-              <div className="form-group">
-                <label>Дата:</label>
+              <div className="field">
+                <label>Дата и время</label>
                 <input
                   type="datetime-local"
                   value={newPlan.planned_date}
-                  onChange={(e) => setNewPlan({...newPlan, planned_date: e.target.value})}
+                  onChange={e => setNewPlan({ ...newPlan, planned_date: e.target.value })}
                 />
               </div>
             )}
 
-            <button className="create-button" onClick={handleCreatePlan}>
-              Создать {newPlan.plan_type === 'wish' ? '✨' : '📅'}
+            <button className="submit-btn" onClick={handleCreatePlan}>
+              Создать
             </button>
           </div>
         )}
@@ -317,4 +295,61 @@ function App() {
   );
 }
 
-export default App;
+function PlanCard({ plan, userId, onInvite, onComplete, onDelete }) {
+  const dateStr = plan.planned_date
+    ? new Date(plan.planned_date).toLocaleDateString('ru-RU', {
+        day: 'numeric', month: 'long', year: 'numeric'
+      })
+    : null;
+
+  return (
+    <div className="card">
+      <div className="card-top">
+        <div className="card-meta">
+          <span className="card-author">{plan.created_by_name}</span>
+          {dateStr && <span className="card-date">{dateStr}</span>}
+        </div>
+        {plan.created_by_id === userId && (
+          <button className="card-delete" onClick={() => onDelete(plan.id)}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        )}
+      </div>
+      <h3 className="card-title">{plan.title}</h3>
+      {plan.description && <p className="card-desc">{plan.description}</p>}
+      <div className="card-actions">
+        <button className="btn-primary" onClick={() => onComplete(plan.id)}>
+          Выполнено
+        </button>
+        {plan.created_by_id === userId && (
+          <button className="btn-secondary" onClick={() => onInvite(plan.id)}>
+            Пригласить
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ title, subtitle, icon }) {
+  return (
+    <div className="empty">
+      <div className="empty-icon">
+        {icon === 'calendar' ? (
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+          </svg>
+        ) : (
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+          </svg>
+        )}
+      </div>
+      <h3>{title}</h3>
+      <p>{subtitle}</p>
+      <div className="empty-hint">Перейдите во вкладку «Создать»</div>
+    </div>
+  );
+}
