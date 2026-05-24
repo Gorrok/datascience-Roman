@@ -43,3 +43,16 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+@app.get("/debug")
+async def debug():
+    import traceback
+    from app.core.database import AsyncSessionLocal
+    try:
+        async with AsyncSessionLocal() as session:
+            from sqlalchemy import text
+            result = await session.execute(text("SELECT name FROM sqlite_master WHERE type='table'"))
+            tables = [row[0] for row in result.fetchall()]
+            return {"status": "ok", "tables": tables}
+    except Exception as e:
+        return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
