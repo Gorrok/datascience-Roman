@@ -39,6 +39,9 @@ export default function App() {
     tg.setBackgroundColor('#f8fafc');
     tg.BackButton.hide();
     loadPlans();
+
+    const safetyTimeout = setTimeout(() => setLoading(false), 5000);
+    return () => clearTimeout(safetyTimeout);
   }, []);
 
   const loadPlans = async () => {
@@ -46,8 +49,8 @@ export default function App() {
       setLoading(true);
       const data = await api.getPlans(userId, false);
       setPlans(data);
-    } catch {
-      tg.showAlert('Не удалось загрузить планы');
+    } catch (err) {
+      console.error('Failed to load plans:', err);
     } finally {
       setLoading(false);
     }
