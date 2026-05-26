@@ -28,8 +28,10 @@ export default function App() {
 
   const userId = tg.initDataUnsafe?.user?.id || 123456;
   const userName = tg.initDataUnsafe?.user?.first_name || 'User';
-  const partnerId = userId === 123456 ? 987654321 : 123456;
-  const partnerName = userId === 123456 ? 'Катя' : 'Роман';
+  const USER_1_ID = 569520047;
+  const USER_2_ID = 290761828;
+  const partnerId = userId === USER_1_ID ? USER_2_ID : USER_1_ID;
+  const partnerName = userId === USER_1_ID ? 'Катя' : 'Роман';
 
   useEffect(() => {
     tg.ready();
