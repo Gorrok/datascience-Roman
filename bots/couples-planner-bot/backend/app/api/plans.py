@@ -1,21 +1,34 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, and_
 from datetime import datetime
 from typing import List
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.plan import Plan, Invite
 from app.schemas.plan import (
     PlanCreate, PlanUpdate, PlanResponse,
     InviteCreate, InviteResponse, InviteStatus
 )
+from app.services.notifier import notify_invite, notify_partner_about_plan
 
 router = APIRouter(prefix="/plans", tags=["plans"])
+
+
+def _partner_id(user_id: int) -> int | None:
+    if settings.USER_1_ID and settings.USER_2_ID:
+        if user_id == settings.USER_1_ID:
+            return settings.USER_2_ID
+        if user_id == settings.USER_2_ID:
+            return settings.USER_1_ID
+    return None
+
 
 @router.post("/", response_model=PlanResponse)
 async def create_plan(
     plan: PlanCreate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
     """Создать новый план или хотелку"""
@@ -23,6 +36,17 @@ async def create_plan(
     db.add(db_plan)
     await db.commit()
     await db.refresh(db_plan)
+
+    partner_id = _partner_id(db_plan.created_by_id)
+    if partner_id:
+        background_tasks.add_task(
+            notify_partner_about_plan,
+            partner_id,
+            db_plan.created_by_name,
+            db_plan.title,
+            db_plan.plan_type,
+        )
+
     return db_plan
 
 @router.get("/", response_model=List[PlanResponse])
@@ -120,23 +144,31 @@ async def delete_plan(
 @router.post("/invites", response_model=InviteResponse)
 async def create_invite(
     invite: InviteCreate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
     """Отправить инвайт на план"""
-    # Проверяем что план существует
     result = await db.execute(
         select(Plan).where(Plan.id == invite.plan_id)
     )
     plan = result.scalar_one_or_none()
-    
+
     if not plan:
         raise HTTPException(status_code=404, detail="Plan not found")
-    
-    # Создаем инвайт
+
     db_invite = Invite(**invite.model_dump())
     db.add(db_invite)
     await db.commit()
     await db.refresh(db_invite)
+
+    background_tasks.add_task(
+        notify_invite,
+        db_invite.to_user_id,
+        db_invite.from_user_name,
+        plan.title,
+        db_invite.id,
+    )
+
     return db_invite
 
 @router.get("/invites/{user_id}", response_model=List[InviteResponse])
