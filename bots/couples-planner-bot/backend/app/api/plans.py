@@ -1,6 +1,6 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, and_
+from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 from datetime import datetime
 from typing import List
@@ -55,6 +55,14 @@ async def create_plan(
 
     return db_plan
 
+def _couple_filter(user_id: int):
+    """Visible plans for the couple — own plans + partner's plans."""
+    partner_id = _partner_id(user_id)
+    if partner_id:
+        return Plan.created_by_id.in_([user_id, partner_id])
+    return Plan.created_by_id == user_id
+
+
 @router.get("/", response_model=List[PlanResponse])
 async def get_plans(
     user_id: int,
@@ -62,24 +70,12 @@ async def get_plans(
     only_completed: bool = False,
     db: AsyncSession = Depends(get_db)
 ):
-    """Получить все планы для пользователя.
+    """Получить все планы пары (свои + партнёра).
 
     - `include_completed`: вернуть и активные, и выполненные
     - `only_completed`: вернуть только выполненные (история)
     """
-    query = select(Plan).where(
-        or_(
-            Plan.created_by_id == user_id,
-            Plan.id.in_(
-                select(Invite.plan_id).where(
-                    and_(
-                        Invite.to_user_id == user_id,
-                        Invite.status == "accepted"
-                    )
-                )
-            )
-        )
-    )
+    query = select(Plan).where(_couple_filter(user_id))
 
     if only_completed:
         query = query.where(Plan.is_completed == True)
@@ -97,19 +93,7 @@ async def get_plans(
 @router.get("/stats/{user_id}")
 async def get_stats(user_id: int, db: AsyncSession = Depends(get_db)):
     """Собрать сводную статистику для пары."""
-    base = select(Plan).where(
-        or_(
-            Plan.created_by_id == user_id,
-            Plan.id.in_(
-                select(Invite.plan_id).where(
-                    and_(
-                        Invite.to_user_id == user_id,
-                        Invite.status == "accepted"
-                    )
-                )
-            )
-        )
-    )
+    base = select(Plan).where(_couple_filter(user_id))
     result = await db.execute(base)
     plans = result.scalars().all()
 
