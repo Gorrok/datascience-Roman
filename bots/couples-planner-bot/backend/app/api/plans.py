@@ -225,7 +225,13 @@ async def create_invite(
         db_invite.id,
     )
 
-    return db_invite
+    # Reload with eager-loaded plan so the response schema can serialize it
+    reloaded = await db.execute(
+        select(Invite)
+        .where(Invite.id == db_invite.id)
+        .options(selectinload(Invite.plan))
+    )
+    return reloaded.scalar_one()
 
 @router.get("/invites/{user_id}", response_model=List[InviteResponse])
 async def get_invites(
