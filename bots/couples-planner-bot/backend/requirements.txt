@@ -7,3 +7,4 @@ aiosqlite==0.20.0
 python-multipart==0.0.20
 loguru==0.7.2
 greenlet==3.1.1
+aiohttp==3.10.10
