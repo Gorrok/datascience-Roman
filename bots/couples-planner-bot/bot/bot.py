@@ -7,6 +7,7 @@ from loguru import logger
 from aiogram import Bot, Dispatcher
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
+from aiogram.types import BotCommand
 
 from handlers import main
 from utils.api_client import APIClient
@@ -79,8 +80,14 @@ async def main_bot():
         data["mini_app_url"] = MINI_APP_URL
         return await handler(event, data)
     
+    await bot.set_my_commands([
+        BotCommand(command="app",   description="Открыть приложение"),
+        BotCommand(command="start", description="Приветствие"),
+        BotCommand(command="help",  description="Помощь"),
+    ])
+
     logger.info("Starting bot...")
-    
+
     try:
         await dp.start_polling(bot)
     finally:

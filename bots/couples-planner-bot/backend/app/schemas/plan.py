@@ -26,6 +26,7 @@ class PlanCreate(PlanBase):
 class PlanUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
+    plan_type: Optional[PlanType] = None
     planned_date: Optional[datetime] = None
     is_completed: Optional[bool] = None
 
@@ -58,5 +59,6 @@ class InviteResponse(BaseModel):
     status: InviteStatus
     created_at: datetime
     responded_at: Optional[datetime] = None
-    
+    plan: Optional[PlanResponse] = None
+
     model_config = ConfigDict(from_attributes=True)

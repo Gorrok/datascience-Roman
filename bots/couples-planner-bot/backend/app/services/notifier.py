@@ -57,3 +57,14 @@ async def notify_partner_about_plan(to_user_id: int, from_user_name: str, plan_t
         f"<i>{plan_title}</i>"
     )
     return await send_telegram_message(to_user_id, text)
+
+
+async def notify_invite_response(to_user_id: int, responder_name: str, plan_title: str, accepted: bool) -> bool:
+    """Notify original inviter about partner's response."""
+    icon = "✅" if accepted else "❌"
+    verb = "приняла приглашение" if accepted else "отклонила приглашение"
+    text = (
+        f"{icon} <b>{responder_name}</b> {verb}\n\n"
+        f"<i>{plan_title}</i>"
+    )
+    return await send_telegram_message(to_user_id, text)

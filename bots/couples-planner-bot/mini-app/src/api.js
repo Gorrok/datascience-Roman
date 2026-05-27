@@ -8,10 +8,19 @@ const client = axios.create({
 });
 
 export const api = {
-  async getPlans(userId, includeCompleted = false) {
+  async getPlans(userId, { includeCompleted = false, onlyCompleted = false } = {}) {
     const response = await client.get('/plans/', {
-      params: { user_id: userId, include_completed: includeCompleted }
+      params: {
+        user_id: userId,
+        include_completed: includeCompleted,
+        only_completed: onlyCompleted,
+      }
     });
+    return response.data;
+  },
+
+  async getStats(userId) {
+    const response = await client.get(`/plans/stats/${userId}`);
     return response.data;
   },
 
@@ -40,5 +49,12 @@ export const api = {
       params: status ? { status } : {}
     });
     return response.data;
-  }
+  },
+
+  async respondToInvite(inviteId, status) {
+    const response = await client.patch(`/plans/invites/${inviteId}/respond`, null, {
+      params: { status },
+    });
+    return response.data;
+  },
 };

@@ -218,41 +218,118 @@ html, body {
   letter-spacing: -0.1px;
 }
 
+/* Stats row in header */
+.stats-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+}
+
+.stat {
+  flex: 1;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-num {
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.18);
+  flex-shrink: 0;
+}
+
+/* Pull-to-refresh indicator */
+.pull-indicator {
+  position: fixed;
+  top: -40px;
+  left: 50%;
+  z-index: 99;
+  width: 40px;
+  height: 40px;
+  background: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--violet-600);
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.25);
+  transition: transform 0.15s ease;
+  border: 1px solid var(--violet-100);
+}
+
+.pull-spinner.spinning svg {
+  animation: spin 0.9s linear infinite;
+}
+
 /* ── Tabs ────────────────────────────────── */
 .tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.85);
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.6);
-  padding: 6px;
+  padding: 5px;
   border-radius: 18px;
-  margin: -40px 16px 24px;
+  margin: -40px 12px 18px;
   position: relative;
   z-index: 10;
   box-shadow: var(--shadow-lg);
 }
 
+.tabs.four {
+  grid-template-columns: repeat(4, 1fr);
+}
+
 .tabs button {
   position: relative;
-  padding: 12px 8px;
+  padding: 10px 4px;
   border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--ink-500);
   font-family: inherit;
   transition: color 0.25s;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 4px;
   border-radius: 13px;
   z-index: 1;
+  min-width: 0;
 }
+
+.tabs.four button { font-size: 11.5px; }
+.tabs:not(.four) button { flex-direction: row; gap: 7px; padding: 12px 8px; font-size: 13px; }
 
 .tabs button.active {
   color: #fff;
@@ -270,20 +347,33 @@ html, body {
 }
 
 .tab-count {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   background: var(--violet-100);
   color: var(--violet-700);
-  padding: 2px 8px;
+  padding: 1px 7px;
   border-radius: 10px;
-  min-width: 22px;
+  min-width: 20px;
   text-align: center;
   transition: all 0.25s;
+  line-height: 1.5;
 }
 
 .tabs button.active .tab-count {
   background: rgba(255, 255, 255, 0.25);
   color: #fff;
+}
+
+.tab-count.pulse {
+  background: var(--pink-500);
+  color: #fff;
+  animation: pulse-badge 1.4s ease-in-out infinite;
+}
+
+.tabs button.active .tab-count.pulse {
+  background: #fff;
+  color: var(--pink-600);
+  animation: none;
 }
 
 /* ── Content ─────────────────────────────── */
@@ -425,7 +515,14 @@ html, body {
   font-weight: 800;
 }
 
-.card-delete {
+.card-icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.card-icon-btn {
   width: 30px;
   height: 30px;
   border: none;
@@ -440,10 +537,18 @@ html, body {
   flex-shrink: 0;
 }
 
-.card-delete:hover {
+.card-icon-btn:hover {
+  background: var(--violet-100);
+  color: var(--violet-700);
+}
+
+.card-icon-btn.danger:hover {
   background: var(--rose-100);
   color: var(--rose-500);
-  transform: rotate(90deg);
+}
+
+.card-icon-btn.inline {
+  flex: 0 0 auto;
 }
 
 .card-title {
@@ -891,3 +996,99 @@ html, body {
 .card:nth-child(4) { animation-delay: 0.16s; }
 .card:nth-child(5) { animation-delay: 0.20s; }
 .card:nth-child(6) { animation-delay: 0.24s; }
+
+/* ── Invite Card ─────────────────────────── */
+.invite-card {
+  background: linear-gradient(135deg, #fff 0%, #fdf2f8 100%);
+  border: 1.5px solid var(--pink-100);
+}
+
+.invite-card::before {
+  opacity: 1;
+  background: linear-gradient(180deg, var(--pink-500) 0%, var(--violet-600) 100%);
+}
+
+.card-date.inline {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--pink-100);
+  color: var(--pink-600);
+  padding: 4px 10px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  margin-top: -2px;
+}
+
+.card-date.inline.today { background: var(--amber-100); color: var(--amber-500); }
+.card-date.inline.soon  { background: var(--pink-100); color: var(--pink-600); }
+
+.btn-decline {
+  flex: 1;
+  padding: 11px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s cubic-bezier(.4, 0, .2, 1);
+  letter-spacing: 0.1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--ink-50);
+  color: var(--ink-700);
+  border: 1.5px solid var(--ink-100);
+}
+
+.btn-decline:hover {
+  background: var(--rose-100);
+  color: var(--rose-500);
+  border-color: var(--rose-100);
+}
+
+.btn-decline:active {
+  transform: scale(0.97);
+}
+
+/* ── Completed Card ──────────────────────── */
+.completed-card {
+  background: var(--ink-50);
+  border-color: var(--ink-100);
+}
+
+.completed-card::before {
+  opacity: 1;
+  background: linear-gradient(180deg, var(--emerald-500) 0%, var(--violet-600) 100%);
+}
+
+.completed-card .card-title.completed-title {
+  text-decoration: line-through;
+  text-decoration-color: var(--ink-300);
+  text-decoration-thickness: 1.5px;
+  color: var(--ink-500);
+}
+
+.completed-card .card-desc {
+  color: var(--ink-300);
+}
+
+.completed-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--emerald-500);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+  flex-shrink: 0;
+}
+
+/* ── Pulse animation ─────────────────────── */
+@keyframes pulse-badge {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.5); }
+  50%      { transform: scale(1.08); box-shadow: 0 0 0 6px rgba(236, 72, 153, 0); }
+}
