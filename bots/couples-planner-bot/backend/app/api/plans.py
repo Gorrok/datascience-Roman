@@ -16,6 +16,7 @@ from app.services.notifier import (
     notify_invite,
     notify_invite_response,
     notify_partner_about_plan,
+    notify_plan_completed,
 )
 
 router = APIRouter(prefix="/plans", tags=["plans"])
@@ -152,6 +153,7 @@ async def get_plan(
 async def update_plan(
     plan_id: int,
     plan_update: PlanUpdate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
     """Обновить план"""
@@ -159,11 +161,12 @@ async def update_plan(
         select(Plan).where(Plan.id == plan_id)
     )
     plan = result.scalar_one_or_none()
-    
+
     if not plan:
         raise HTTPException(status_code=404, detail="Plan not found")
-    
+
     update_data = plan_update.model_dump(exclude_unset=True)
+    was_completed = plan.is_completed
 
     if "is_completed" in update_data:
         if update_data["is_completed"]:
@@ -173,9 +176,25 @@ async def update_plan(
 
     for field, value in update_data.items():
         setattr(plan, field, value)
-    
+
     await db.commit()
     await db.refresh(plan)
+
+    just_completed = (
+        "is_completed" in update_data
+        and update_data["is_completed"]
+        and not was_completed
+    )
+    if just_completed:
+        partner_id = _partner_id(plan.created_by_id)
+        if partner_id:
+            background_tasks.add_task(
+                notify_plan_completed,
+                partner_id,
+                plan.created_by_name,
+                plan.title,
+            )
+
     return plan
 
 @router.delete("/{plan_id}")
