@@ -35,6 +35,21 @@ const haptic = {
 const USER_1_ID = 569520047;
 const USER_2_ID = 290761828;
 
+const SWEET_MESSAGES = [
+  'Ты делаешь меня счастливее',
+  'Каждый план с тобой — лучший',
+  'Скучаю, даже когда ты рядом',
+  'Ты — мой любимый человек',
+  'Спасибо, что ты есть',
+  'С тобой даже вторник — праздник',
+  'Обнимаю крепко-крепко',
+  'Хочу все планы только с тобой',
+  'Ты — моё самое уютное «домой»',
+  'Люблю наши маленькие приключения',
+];
+
+const HEART_COLORS = ['#ec4899', '#f59e0b', '#7c3aed', '#f472b6', '#fb7185'];
+
 function formatDate(dateStr) {
   if (!dateStr) return null;
   const date = new Date(dateStr);
@@ -111,6 +126,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('plans');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [hearts, setHearts] = useState([]);
+  const [toast, setToast] = useState(null);
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -210,6 +227,35 @@ export default function App() {
     pullState.current.distance = 0;
   };
 
+  // ── Сердечки и тосты ───────────────────────
+  const burstHearts = (count = 14) => {
+    const batch = Array.from({ length: count }).map((_, i) => ({
+      id: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+      left: 8 + Math.random() * 84,
+      delay: Math.random() * 0.35,
+      duration: 2.2 + Math.random() * 1.4,
+      size: 16 + Math.random() * 22,
+      drift: (Math.random() - 0.5) * 100,
+      color: HEART_COLORS[Math.floor(Math.random() * HEART_COLORS.length)],
+    }));
+    setHearts(prev => [...prev, ...batch]);
+    setTimeout(() => {
+      const ids = new Set(batch.map(b => b.id));
+      setHearts(prev => prev.filter(h => !ids.has(h.id)));
+    }, 4200);
+  };
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(t => (t === msg ? null : t)), 2800);
+  };
+
+  const onHeartTap = () => {
+    haptic.light();
+    burstHearts(16);
+    showToast(SWEET_MESSAGES[Math.floor(Math.random() * SWEET_MESSAGES.length)]);
+  };
+
   // ── Sheet ──────────────────────────────────
   const openCreateSheet = (type = 'plan') => {
     haptic.light();
@@ -288,6 +334,7 @@ export default function App() {
 
   const handleComplete = async (planId) => {
     haptic.success();
+    burstHearts(12);
     try {
       await api.updatePlan(planId, { is_completed: true });
       await loadAll(true);
@@ -391,6 +438,32 @@ export default function App() {
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
+      {/* Floating hearts */}
+      <div className="hearts-layer">
+        {hearts.map(h => (
+          <span
+            key={h.id}
+            className="floating-heart"
+            style={{
+              left: `${h.left}%`,
+              fontSize: `${h.size}px`,
+              color: h.color,
+              animationDuration: `${h.duration}s`,
+              animationDelay: `${h.delay}s`,
+              '--drift': `${h.drift}px`,
+            }}
+          >♥</span>
+        ))}
+      </div>
+
+      {/* Sweet toast */}
+      {toast && (
+        <div className="sweet-toast" key={toast}>
+          <span className="sweet-toast-heart">♥</span>
+          {toast}
+        </div>
+      )}
+
       {/* Pull-to-refresh indicator */}
       {(pullDistance > 0 || refreshing) && (
         <div
@@ -427,7 +500,10 @@ export default function App() {
             <div className="header-badge">с {partnerName}</div>
           </div>
 
-          <h1>Привет, {userName}<span className="heart">♥</span></h1>
+          <h1>
+            Привет, {userName}
+            <span className="heart" onClick={onHeartTap} role="button" aria-label="Сердечко">♥</span>
+          </h1>
 
           <div className="stats-row">
             <div className="stat">
