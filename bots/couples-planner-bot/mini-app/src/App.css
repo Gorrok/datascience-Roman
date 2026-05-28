@@ -515,6 +515,24 @@ html, body {
   font-weight: 800;
 }
 
+.card-date.overdue {
+  color: var(--rose-500);
+  font-weight: 800;
+}
+
+.card.overdue::before {
+  opacity: 1;
+  background: linear-gradient(180deg, var(--rose-500) 0%, #b91c1c 100%);
+}
+
+.section-title.overdue {
+  color: var(--rose-500);
+}
+
+.section-title.overdue::after {
+  background: linear-gradient(to right, var(--rose-100), transparent);
+}
+
 .card-icons {
   display: flex;
   align-items: center;
@@ -1020,8 +1038,9 @@ html, body {
   margin-top: -2px;
 }
 
-.card-date.inline.today { background: var(--amber-100); color: var(--amber-500); }
-.card-date.inline.soon  { background: var(--pink-100); color: var(--pink-600); }
+.card-date.inline.today   { background: var(--amber-100); color: var(--amber-500); }
+.card-date.inline.soon    { background: var(--pink-100); color: var(--pink-600); }
+.card-date.inline.overdue { background: var(--rose-100); color: var(--rose-500); }
 
 .btn-decline {
   flex: 1;

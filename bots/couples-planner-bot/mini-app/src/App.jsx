@@ -18,6 +18,8 @@ const tg = window.Telegram?.WebApp || {
   showAlert: (msg) => alert(msg),
   showConfirm: (msg, cb) => cb(confirm(msg)),
   showPopup: ({ message }) => alert(message),
+  onEvent: () => {},
+  offEvent: () => {},
 };
 
 const haptic = {
@@ -41,13 +43,30 @@ function formatDate(dateStr) {
   const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const diffDays = Math.round((target - today) / 86400000);
 
+  // Время показываем, только если оно задано (не полночь)
+  const hasTime = date.getHours() !== 0 || date.getMinutes() !== 0;
+  const timeStr = hasTime
+    ? date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+    : null;
+
   let label;
   let tone = 'normal';
+  let overdue = false;
+
   if (diffDays < 0) {
-    label = `${Math.abs(diffDays)} дн. назад`;
+    label = diffDays === -1 ? 'Вчера' : `${Math.abs(diffDays)} дн. назад`;
+    tone = 'overdue';
+    overdue = true;
   } else if (diffDays === 0) {
-    label = 'Сегодня';
-    tone = 'today';
+    // Сегодня: если время уже прошло — просрочено
+    if (hasTime && date < now) {
+      label = 'Сегодня';
+      tone = 'overdue';
+      overdue = true;
+    } else {
+      label = 'Сегодня';
+      tone = 'today';
+    }
   } else if (diffDays === 1) {
     label = 'Завтра';
     tone = 'soon';
@@ -58,7 +77,9 @@ function formatDate(dateStr) {
     label = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
   }
 
-  return { label, tone, diffDays };
+  if (timeStr) label = `${label} в ${timeStr}`;
+
+  return { label, tone, diffDays, overdue };
 }
 
 function formatCompletedDate(dateStr) {
@@ -135,6 +156,25 @@ export default function App() {
     return () => clearTimeout(safetyTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Авто-синхронизация: подтягиваем изменения партнёра ──
+  useEffect(() => {
+    const syncIfVisible = () => {
+      if (document.visibilityState === 'visible') loadAll(true);
+    };
+    document.addEventListener('visibilitychange', syncIfVisible);
+    window.addEventListener('focus', syncIfVisible);
+    tg.onEvent?.('activated', syncIfVisible);
+
+    const interval = setInterval(syncIfVisible, 30000);
+
+    return () => {
+      document.removeEventListener('visibilitychange', syncIfVisible);
+      window.removeEventListener('focus', syncIfVisible);
+      tg.offEvent?.('activated', syncIfVisible);
+      clearInterval(interval);
+    };
+  }, [loadAll]);
 
   // ── Pull-to-refresh ────────────────────────
   const contentRef = useRef(null);
@@ -237,7 +277,7 @@ export default function App() {
       });
       haptic.success();
       tg.showPopup({
-        message: `Приглашение отправлено — ${partnerName}`,
+        message: `${partnerName} получит приглашение на этот план`,
         buttons: [{ type: 'ok' }],
       });
     } catch {
@@ -302,6 +342,28 @@ export default function App() {
     if (!b.planned_date) return -1;
     return new Date(a.planned_date) - new Date(b.planned_date);
   });
+
+  // Группировка планов по близости даты
+  const planGroups = (() => {
+    const groups = { overdue: [], today: [], week: [], later: [], noDate: [] };
+    for (const p of scheduledPlans) {
+      const info = formatDate(p.planned_date);
+      if (!info) groups.noDate.push(p);
+      else if (info.overdue) groups.overdue.push(p);
+      else if (info.diffDays === 0) groups.today.push(p);
+      else if (info.diffDays < 7) groups.week.push(p);
+      else groups.later.push(p);
+    }
+    return groups;
+  })();
+
+  const planSections = [
+    { key: 'overdue', title: 'Просрочено',  items: planGroups.overdue },
+    { key: 'today',   title: 'Сегодня',     items: planGroups.today },
+    { key: 'week',    title: 'На неделе',   items: planGroups.week },
+    { key: 'later',   title: 'Позже',       items: planGroups.later },
+    { key: 'noDate',  title: 'Без даты',    items: planGroups.noDate },
+  ].filter(s => s.items.length > 0);
 
   const showFab = activeTab === 'plans' || activeTab === 'wishes';
 
@@ -391,7 +453,7 @@ export default function App() {
         {[
           { id: 'plans',     label: 'Планы',    count: scheduledPlans.length },
           { id: 'wishes',    label: 'Желания',  count: wishes.length },
-          { id: 'invites',   label: 'Инвайты',  count: invites.length, pulse: invites.length > 0 },
+          { id: 'invites',   label: 'Зовут',    count: invites.length, pulse: invites.length > 0 },
           { id: 'completed', label: 'История',  count: completed.length },
         ].map(tab => (
           <button
@@ -417,22 +479,26 @@ export default function App() {
                 icon="calendar"
               />
             ) : (
-              <>
-                <div className="section-title">Запланировано</div>
-                <div className="cards">
-                  {scheduledPlans.map(plan => (
-                    <PlanCard
-                      key={plan.id}
-                      plan={plan}
-                      userId={userId}
-                      onInvite={handleInvite}
-                      onComplete={handleComplete}
-                      onEdit={openEditSheet}
-                      onDelete={handleDelete}
-                    />
-                  ))}
+              planSections.map(section => (
+                <div key={section.key}>
+                  <div className={`section-title ${section.key === 'overdue' ? 'overdue' : ''}`}>
+                    {section.title}
+                  </div>
+                  <div className="cards">
+                    {section.items.map(plan => (
+                      <PlanCard
+                        key={plan.id}
+                        plan={plan}
+                        userId={userId}
+                        onInvite={handleInvite}
+                        onComplete={handleComplete}
+                        onEdit={openEditSheet}
+                        onDelete={handleDelete}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </>
+              ))
             )}
           </>
         )}
@@ -470,13 +536,13 @@ export default function App() {
           <>
             {invites.length === 0 ? (
               <EmptyState
-                title="Нет новых приглашений"
-                subtitle={`Когда ${partnerName} пригласит вас на план — увидите его здесь`}
+                title="Вас пока никуда не зовут"
+                subtitle={`Когда ${partnerName} позовёт вас на план — он появится здесь`}
                 icon="mail"
               />
             ) : (
               <>
-                <div className="section-title">Ждут вашего ответа</div>
+                <div className="section-title">{partnerName} зовёт вас</div>
                 <div className="cards">
                   {invites.map(inv => (
                     <InviteCard
@@ -627,7 +693,11 @@ export default function App() {
 function PlanCard({ plan, userId, onInvite, onComplete, onEdit, onDelete }) {
   const isMine = plan.created_by_id === userId;
   const dateInfo = formatDate(plan.planned_date);
-  const cardClass = `card ${dateInfo?.tone === 'soon' || dateInfo?.tone === 'today' ? 'soon' : ''}`;
+  const cardClass = `card ${
+    dateInfo?.tone === 'overdue' ? 'overdue'
+    : (dateInfo?.tone === 'soon' || dateInfo?.tone === 'today') ? 'soon'
+    : ''
+  }`;
 
   return (
     <div className={cardClass}>
@@ -677,10 +747,10 @@ function PlanCard({ plan, userId, onInvite, onComplete, onEdit, onDelete }) {
         {isMine && (
           <button className="btn-secondary" onClick={() => onInvite(plan.id)}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-              <path d="M22 6L12 13 2 6"/>
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
             </svg>
-            Пригласить
+            Позвать
           </button>
         )}
       </div>
@@ -700,7 +770,7 @@ function InviteCard({ invite, onAccept, onDecline }) {
           </div>
           <div className="card-author-info">
             <div className="card-author-name">
-              {invite.from_user_name} приглашает
+              {invite.from_user_name} зовёт вас
             </div>
             <div className="card-date">
               {new Date(invite.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
@@ -718,13 +788,13 @@ function InviteCard({ invite, onAccept, onDecline }) {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <path d="M20 6L9 17l-5-5"/>
           </svg>
-          Принять
+          Я за!
         </button>
         <button className="btn-decline" onClick={onDecline}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <path d="M18 6L6 18M6 6l12 12"/>
           </svg>
-          Отклонить
+          Не сейчас
         </button>
       </div>
     </div>
